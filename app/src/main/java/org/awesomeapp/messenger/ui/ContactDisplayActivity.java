@@ -204,7 +204,10 @@ public class ContactDisplayActivity extends BaseActivity {
 
                 findViewById(R.id.listEncryptionKey).setVisibility(View.VISIBLE);
 
-                tv.setText(OmemoKeyUtil.prettyFingerprint(remoteFingerprint));
+                // tv.setText(OmemoKeyUtil.prettyFingerprint(remoteFingerprint));
+                // [CRYPTO_TALK] remoteFingerprint has only 40 characters from iOS device, so it doesn't have 64 characters
+                // to be delimited by 8 white spaces
+                tv.setText(remoteFingerprint);
 
                 iv.setOnClickListener(new View.OnClickListener() {
 

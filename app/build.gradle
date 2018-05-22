@@ -102,8 +102,9 @@ android {
 }
 
 ext {
-    smackVersion="4.2.2"
-    smackOmemoVersion="4.2.2"
+    // [CRYPTO_TALK] upgrade from 4.2.2 in order to fix the bug in manager.requestSlot in Zom-Android/app/src/main/java/org/awesomeapp/messenger/plugin/xmpp/XmppConnection.java
+    smackVersion="4.2.3"
+    smackOmemoVersion="4.2.3"
 }
 
 

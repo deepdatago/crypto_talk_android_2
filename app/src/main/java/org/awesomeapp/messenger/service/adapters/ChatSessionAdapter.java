@@ -588,6 +588,9 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                 }
 
                 boolean doEncryption = !isGroupChatSession();
+                // [CRYPTO_TALK] after encryption, the file size is not the same as requested.  Need to properly fix
+                // it later.  Refer to the error in Zom-Android/app/src/main/java/org/awesomeapp/messenger/plugin/xmpp/XmppConnection.java::uploadFile
+                doEncryption = false;
 
                 UploadProgressListener listener = new UploadProgressListener() {
                     @Override
