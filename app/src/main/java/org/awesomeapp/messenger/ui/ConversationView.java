@@ -3011,6 +3011,9 @@ public class ConversationView {
             String nickname = isGroupChat() ? new XmppAddress(cursor.getString(mNicknameColumn)).getUser() : mRemoteNickname;
 
             String mimeType = cursor.getString(mMimeTypeColumn);
+            // [CRYPTO_TALK] TODO: fix later: find out how application/octet-stream is constructed, as it should be audio/mpeg
+            if (mimeType != null && mimeType.startsWith("application"))
+                mimeType = "audio/mpeg";
             int id = cursor.getInt(mIdColumn);
             String body = cursor.getString(mBodyColumn);
             long delta = cursor.getLong(mDeltaColumn);
