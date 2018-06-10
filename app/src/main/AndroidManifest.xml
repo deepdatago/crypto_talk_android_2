@@ -336,10 +336,10 @@
             android:launchMode="singleTask"/>
         <activity
             android:name="org.awesomeapp.messenger.ui.qr.QrScanActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize" />
+            android:configChanges="keyboardHidden|orientation" />
         <activity
             android:name="org.awesomeapp.messenger.ui.qr.QrDisplayActivity"
-            android:configChanges="keyboardHidden|orientation|screenSize" />
+            android:configChanges="keyboardHidden|orientation" />
 
         <activity
             android:name="org.awesomeapp.messenger.ui.legacy.DummyActivity"
