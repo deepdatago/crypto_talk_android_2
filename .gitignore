@@ -4,7 +4,6 @@ ant.properties
 default.properties
 proguard.cfg
 proguard-project.txt
-app/src/main/java/org/awesomeapp/messenger/util/Debug.java
 #
 assets/chatsecure.properties
 releases

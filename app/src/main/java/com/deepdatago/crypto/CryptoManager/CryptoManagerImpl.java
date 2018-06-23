@@ -49,7 +49,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
-
+import android.util.Log;
 
 public class CryptoManagerImpl implements CryptoManager {
 	private final String algorithm; // "RSA"
@@ -284,6 +284,7 @@ public class CryptoManagerImpl implements CryptoManager {
     }
 
 	public String encryptDataWithSymmetricKey(String inKey, String data) {
+		Log.d("CryptoManagerImpl", data);
 		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
 
 		Cipher cipher = null;
@@ -326,6 +327,12 @@ public class CryptoManagerImpl implements CryptoManager {
 			e.printStackTrace();
 		}
 		String encodedEncryptedStr = new String(Base64.encode(cipherText, Base64.DEFAULT));
+		if (encodedEncryptedStr.endsWith("\n"))
+		{
+			// iOS base64 decode cannot take the extra "\n" at the end.  So, have to remove it,
+			// refer to Data(base64Encoded: base64Input)! in swift code
+			encodedEncryptedStr = encodedEncryptedStr.substring(0, encodedEncryptedStr.length() - 1);
+		}
 		return encodedEncryptedStr;
 	}
 
