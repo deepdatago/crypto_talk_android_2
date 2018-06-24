@@ -324,12 +324,8 @@ public class CryptoManagerImpl implements CryptoManager {
 			e.printStackTrace();
 		}
 		String encodedEncryptedStr = new String(Base64.encode(cipherText, Base64.DEFAULT));
-		if (encodedEncryptedStr.endsWith("\n"))
-		{
-			// iOS base64 decode cannot take the extra "\n" at the end.  So, have to remove it,
-			// refer to Data(base64Encoded: base64Input)! in swift code
-			encodedEncryptedStr = encodedEncryptedStr.substring(0, encodedEncryptedStr.length() - 1);
-		}
+		encodedEncryptedStr = encodedEncryptedStr.replace("\n", "");
+		Log.d("encrypted", encodedEncryptedStr);
 		return encodedEncryptedStr;
 	}
 
