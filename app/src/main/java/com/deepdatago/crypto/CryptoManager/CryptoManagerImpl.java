@@ -11,6 +11,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -309,15 +310,11 @@ public class CryptoManagerImpl implements CryptoManager {
 			e.printStackTrace();
 		}
 
-		byte[] cipherText = new byte[cipher.getOutputSize(data.length())];
+		byte[] cipherText = null;
 		int ctLength = 0;
 
 		try {
-			ctLength = cipher.update(data.getBytes(), 0, data.length(), cipherText, 0);
-			ctLength += cipher.doFinal(cipherText, ctLength);
-		} catch (ShortBufferException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			cipherText = cipher.doFinal(data.getBytes(Charset.forName("UTF-8")));
 		} catch (BadPaddingException e)
 		{
 			e.printStackTrace();
