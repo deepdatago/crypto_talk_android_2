@@ -6,6 +6,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.io.InputStream;
 
 public interface CryptoManager {
 	/**
@@ -84,4 +85,44 @@ public interface CryptoManager {
 	 * @return      Plain text string of the decrypted data
 	 */
 	public String decryptDataWithSymmetricKey(String inKey, String data);
+
+	/**
+	 * Encrypt a string with given symmetric key
+	 *
+	 * @param  inKey symmetric key that is used to encrypt the given byte[]
+	 * @param  inputFileName input file name, which needs to be encrypted
+	 * @param  outputFileName output file name, which needs to be written to
+	 * @return      Base64 encoded string of the encrypted data
+	 */
+	public void encryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
+
+	/**
+	 * Decrypt a string with given symmetric key
+	 *
+	 * @param  inKey symmetric key that is used to decrypt the given byte[]
+	 * @param  inputFileName input file name, which needs to be decrypted
+	 * @param  outputFileName output file name, which needs to be written to
+	 * @return      Plain text string of the decrypted data
+	 */
+	public void decryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
+
+
+	/**
+	 * Encrypt a string with given symmetric key
+	 *
+	 * @param  inKey symmetric key that is used to encrypt the given byte[]
+	 * @param  inputStream input stream, which needs to be encrypted
+	 * @return      Cipherized input stream
+	 */
+	public InputStream encryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream);
+
+	/**
+	 * Decrypt input stream with given symmetric key
+	 *
+	 * @param  inKey symmetric key that is used to encrypt the given byte[]
+	 * @param  inputStream input stream, which needs to be decrypted
+	 * @return      Decrypted input stream
+	 */
+	public InputStream decryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream);
+
 }

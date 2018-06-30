@@ -1,5 +1,7 @@
 package com.deepdatago.crypto.CryptoManager;
 
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -368,5 +370,85 @@ public class CryptoManagerImpl implements CryptoManager {
 
 		String decryptedString = new String(decryptedPlainText);
 		return decryptedString;
+	}
+
+	public void encryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName) {
+		try {
+			File inputFile = new File(inputFileName);
+			File outputFile = new File(outputFileName);
+			doCrypto(Cipher.ENCRYPT_MODE, inKey, inputFile, outputFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void decryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName) {
+		try {
+			File inputFile = new File(inputFileName);
+			File outputFile = new File(outputFileName);
+			doCrypto(Cipher.DECRYPT_MODE, inKey, inputFile, outputFile);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private void doCrypto(int cipherMode, String inKey, File inputFile,
+						  File outputFile) throws Exception {
+		try {
+			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			cipher.init(cipherMode, key);
+
+			FileInputStream inputStream = new FileInputStream(inputFile);
+			byte[] inputBytes = new byte[(int) inputFile.length()];
+			inputStream.read(inputBytes);
+
+			byte[] outputBytes = cipher.doFinal(inputBytes);
+
+			FileOutputStream outputStream = new FileOutputStream(outputFile);
+			outputStream.write(outputBytes);
+
+			inputStream.close();
+			outputStream.close();
+
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	public InputStream encryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream) {
+		return doCryptoStream(Cipher.ENCRYPT_MODE, inKey, inputStream);
+	}
+
+	public InputStream decryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream) {
+		return doCryptoStream(Cipher.DECRYPT_MODE, inKey, inputStream);
+	}
+
+	public InputStream doCryptoStream(int cipherMode, String inKey, InputStream inputStream) {
+		try {
+			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			cipher.init(cipherMode, key);
+
+			// FileInputStream inputStream = new FileInputStream(inputFile);
+			int inputLength = inputStream.available();
+			byte[] inputBytes = new byte[inputLength];
+			inputStream.read(inputBytes);
+
+			byte[] outputBytes = cipher.doFinal(inputBytes);
+
+			// FileOutputStream outputStream = new FileOutputStream(outputFile);
+			// outputStream.write(outputBytes);
+			InputStream cipherInputStream = new ByteArrayInputStream(outputBytes);
+
+			// inputStream.close();
+			// outputStream.close();
+			return cipherInputStream;
+
+		} catch (Exception e) {
+			e.printStackTrace();;
+		}
+		return null;
 	}
 }

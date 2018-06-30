@@ -3,6 +3,9 @@ package eu.siacs.conversations;
 import android.util.Log;
 import android.webkit.URLUtil;
 
+import com.deepdatago.crypto.CryptoManager.CryptoManager;
+import com.deepdatago.crypto.CryptoManager.CryptoManagerImpl;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.awesomeapp.messenger.util.SecureMediaStore;
@@ -16,7 +19,9 @@ import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.util.encoders.HexEncoder;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,6 +31,9 @@ import java.net.URL;
 import info.guardianproject.iocipher.File;
 
 public class Downloader {
+    private String mTmpLocalFile = null;
+    private CryptoManager mCryptoManager = null;
+    private String mTestKey = null;
 
     static {
         URL.setURLStreamHandlerFactory(new AesGcmURLStreamHandlerFactory());
@@ -34,7 +42,14 @@ public class Downloader {
     private String mMimeType = null;
 
     public Downloader()
-    {}
+    {
+    }
+
+    public Downloader(CryptoManager iCryptoManager, String iTestKey)
+    {
+        this.mCryptoManager = iCryptoManager;
+        this.mTestKey = iTestKey;
+    }
 
     public boolean get (String urlString, OutputStream storageStream) throws IOException
     {
@@ -54,16 +69,50 @@ public class Downloader {
             mMimeType = connection.getContentType();
 
             if (mMimeType != null && (!mMimeType.startsWith("text"))) {
-                OutputStream os = setupOutputStream(storageStream, url.getRef());
-                byte[] buffer = new byte[4096];
-                int count;
-                while ((count = inputStream.read(buffer)) != -1) {
-                    os.write(buffer, 0, count);
+
+                if (mCryptoManager != null) {
+                    // [CRYPTO_TALK] setup temp file
+                    // mTmpLocalFile
+                    // OutputStream tmpOS = new FileOutputStream(mTmpLocalFile);
+                    info.guardianproject.iocipher.File tmpFileNew = new info.guardianproject.iocipher.File(mTmpLocalFile);
+                    tmpFileNew.getParentFile().mkdirs();
+
+                    OutputStream tmpOS = new info.guardianproject.iocipher.FileOutputStream(tmpFileNew);
+
+                    byte[] buffer = new byte[4096];
+                    int count;
+                    while ((count = inputStream.read(buffer)) != -1) {
+                        tmpOS.write(buffer, 0, count);
+                    }
+                    tmpOS.flush();
+                    tmpOS.close();
+
+                    InputStream encryptedInputStream = new info.guardianproject.iocipher.FileInputStream(tmpFileNew);
+                    InputStream decryptedInputStream = mCryptoManager.decryptInputStreamWithSymmetricKey(mTestKey, encryptedInputStream);
+                    //
+                    OutputStream os = setupOutputStream(storageStream, url.getRef());
+                    while ((count = decryptedInputStream.read(buffer)) != -1) {
+                        os.write(buffer, 0, count);
+                    }
+                    os.flush();
+                    os.close();
+                    connection.disconnect();
+                    return true;
                 }
-                os.flush();
-                os.close();
-                connection.disconnect();
-                return true;
+                else {
+
+                    OutputStream os = setupOutputStream(storageStream, url.getRef());
+                    byte[] buffer = new byte[4096];
+                    int count;
+                    while ((count = inputStream.read(buffer)) != -1) {
+                        os.write(buffer, 0, count);
+                    }
+                    os.flush();
+                    os.close();
+                    connection.disconnect();
+                    return true;
+                }
+
             }
             else {
                 connection.disconnect();
@@ -139,6 +188,11 @@ public class Downloader {
 
         String filename = getFilenameFromUrl(url);
         String localFilename = SecureMediaStore.getDownloadFilename(sessionId, filename);
+        {
+            // [CRYPTO_TALK]
+            mTmpLocalFile = localFilename + "_enc";
+
+        }
       //  debug( "openFile: localFilename " + localFilename) ;
         info.guardianproject.iocipher.File fileNew = new info.guardianproject.iocipher.File(localFilename);
         fileNew.getParentFile().mkdirs();

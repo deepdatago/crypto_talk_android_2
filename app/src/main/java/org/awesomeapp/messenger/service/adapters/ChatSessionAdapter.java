@@ -90,6 +90,9 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
 
+import com.deepdatago.crypto.CryptoManager.CryptoManager;
+import com.deepdatago.crypto.CryptoManager.CryptoManagerImpl;
+
 import static cz.msebera.android.httpclient.conn.ssl.SSLConnectionSocketFactory.TAG;
 
 public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSession.Stub {
@@ -141,6 +144,8 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
     private long mContactId;
     private boolean mIsMuted = false;
     private String mNickname = null;
+    private CryptoManager mCryptoManager = new CryptoManagerImpl();
+    private final String mTestKey = "63A78349DF7544768E0ECBCF3ACB6527";
 
     public ChatSessionAdapter(ChatSession chatSession, ImConnectionAdapter connection, boolean isNewSession) {
 
@@ -604,7 +609,24 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                     }
                 };
 
-                String resultUrl = mConnection.publishFile(sendFileName, mimeType, fileLength, fis, doEncryption, listener);
+                // String resultUrl = mConnection.publishFile(sendFileName, mimeType, fileLength, fis, doEncryption, listener);
+
+                String resultUrl = null;
+                {
+                    // [CRYPTO_TALK]
+                    // encrypt inputstream "fis"
+                    // Log.e(TAG,"sendFileName: " + sendFileName + " and mediaPath: " + mediaPath);
+                    InputStream cipherStream = mCryptoManager.encryptInputStreamWithSymmetricKey(mTestKey, fis);
+                    int cipherStreamLength = 0;
+                    try {
+                        cipherStreamLength = cipherStream.available();
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    resultUrl = mConnection.publishFile(sendFileName, mimeType, cipherStreamLength, cipherStream, doEncryption, listener);
+
+                }
 
                 //make sure result is valid and starts with https, if so, send it!
                 if (!TextUtils.isEmpty(resultUrl))
@@ -1994,7 +2016,7 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         String result = null;
 
         try {
-            Downloader dl = new Downloader();
+            Downloader dl = new Downloader(mCryptoManager, mTestKey);
             File fileDownload = dl.openSecureStorageFile(mContactId + "", mediaLink);
             OutputStream storageStream = new info.guardianproject.iocipher.FileOutputStream(fileDownload);
             boolean downloaded = dl.get(mediaLink, storageStream);
