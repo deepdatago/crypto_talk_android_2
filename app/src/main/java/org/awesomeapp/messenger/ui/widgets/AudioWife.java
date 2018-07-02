@@ -598,7 +598,6 @@ public class AudioWife {
      * Initialize and prepare the audio player
      ****/
     private void initPlayer(Context ctx, final Uri mediaUri, String mimeType) throws IOException {
-
         mMediaPlayer = new MediaPlayer();
         mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
@@ -665,8 +664,12 @@ public class AudioWife {
             mMediaPlayer.prepare();
         } catch (IllegalStateException e) {
             e.printStackTrace();
+            // [CRYPTO_TALK] throw exception so that it doesn't hang due to mMediaPlayer.prepare();
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
+            // [CRYPTO_TALK] throw exception so that it doesn't hang due to mMediaPlayer.prepare();
+            throw e;
         }
 
         mMediaPlayer.setOnCompletionListener(mOnCompletion);
