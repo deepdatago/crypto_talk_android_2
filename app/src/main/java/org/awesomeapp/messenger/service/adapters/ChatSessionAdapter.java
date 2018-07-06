@@ -90,8 +90,8 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
 
-import com.deepdatago.crypto.CryptoManager.CryptoManager;
-import com.deepdatago.crypto.CryptoManager.CryptoManagerImpl;
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 
 import static cz.msebera.android.httpclient.conn.ssl.SSLConnectionSocketFactory.TAG;
 

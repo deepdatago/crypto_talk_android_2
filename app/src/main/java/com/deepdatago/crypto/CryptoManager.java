@@ -1,4 +1,4 @@
-package com.deepdatago.crypto.CryptoManager;
+package com.deepdatago.crypto;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;

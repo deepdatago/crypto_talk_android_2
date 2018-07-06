@@ -1,4 +1,4 @@
-package com.deepdatago.crypto.CryptoManager;
+package com.deepdatago.crypto;
 
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;

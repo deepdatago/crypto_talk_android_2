@@ -40,8 +40,8 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.deepdatago.crypto.CryptoManager.CryptoManager;
-import com.deepdatago.crypto.CryptoManager.CryptoManagerImpl;
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 
 /*
  * OtrChatManager keeps track of the status of chats and their OTR stuff

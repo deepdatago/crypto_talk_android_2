@@ -3,8 +3,8 @@ package eu.siacs.conversations;
 import android.util.Log;
 import android.webkit.URLUtil;
 
-import com.deepdatago.crypto.CryptoManager.CryptoManager;
-import com.deepdatago.crypto.CryptoManager.CryptoManagerImpl;
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
