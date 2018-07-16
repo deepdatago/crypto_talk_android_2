@@ -438,6 +438,17 @@
             android:name="org.awesomeapp.messenger.service.NetworkSchedulerService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
+
+        <provider
+            android:name="com.deepdatago.provider.CryptoProvider"
+            android:authorities="com.deepdatago.provider.Crypto"
+            android:exported="false"
+            android:grantUriPermissions="true"
+            android:readPermission="org.awesomeapp.messenger.permission.READ_ONLY"
+            android:writePermission="org.awesomeapp.messenger.permission.WRITE_ONLY"
+            android:directBootAware="true"
+            />
+
     </application>
 
 </manifest>

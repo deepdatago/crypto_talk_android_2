@@ -39,7 +39,7 @@ public class AccountManagerImpl implements AccountManager {
     private NodeConfig mNodeConfig = new NodeConfig();
     private Node mNode = null;
     private CryptoManager mCryptoManager = null;
-    private String mSymmetricKeyForAllFriends = "63A78349DF7544768E0ECBCF3ACB6527"; // TODO auto generate and save mSymmetricKeyForAllFriends to Database
+    private String mSymmetricKeyForAllFriends = null; // "63A78349DF7544768E0ECBCF3ACB6527";
     private final String mKeyStoreName = "keystore";
     private java.io.File mFileDir = null;
     private final String mPublicKeyName = "account_rsa_public.pem"; // in mFileDir/keystore
@@ -47,13 +47,14 @@ public class AccountManagerImpl implements AccountManager {
     private final String mPublicServerAddress = "0xce66ae967e95f6f90defa8b58e6ab4a721c3c7fb"; // a server address, can be changed later
     private final String mGethNodeDir = ".eth1";
 
-    public AccountManagerImpl(java.io.File fileDir, String creationPassword) {
-        if (fileDir == null || creationPassword == null)
+    public AccountManagerImpl(java.io.File fileDir, String creationPassword, String sharedSymmetricKey) {
+        if (fileDir == null || creationPassword == null || sharedSymmetricKey == null)
             return;
 
         this.mKeyStore = new KeyStore(fileDir + "/" + this.mKeyStoreName, Geth.LightScryptN, Geth.LightScryptP);
         this.mCreationPassword = creationPassword;
         this.mFileDir = fileDir;
+        this.mSymmetricKeyForAllFriends = sharedSymmetricKey;
 
         this.mCryptoManager = new CryptoManagerImpl();
 
