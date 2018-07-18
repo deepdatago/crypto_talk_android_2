@@ -27,6 +27,7 @@ import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -48,6 +50,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.deepdatago.provider.CryptoProvider;
 import com.jrummyapps.android.shell.CommandResult;
 import com.jrummyapps.android.shell.Shell;
 
@@ -508,6 +511,33 @@ public class RemoteImService extends Service implements OtrEngineListener, ImSer
         debug("Scanning accounts and login automatically");
 
         ContentResolver resolver = getContentResolver();
+        {
+            long listId = 0;
+            // [CRYPTO_TALK] trace
+            // ContentValues accountValue = new ContentValues(1);
+            // contactListValues.put(Imps.ContactList.NAME, list.getName());
+            // accountValue.put("shared_symmetric_key", "63A78349DF7544768E0ECBCF3ACB6527");
+
+            Uri uri = null;
+            // uri = resolver.insert(Imps.Contacts.CRYPTO_ACCOUNT_URI, accountValue);
+            // listId = ContentUris.parseId(uri);
+
+
+            Cursor acct = resolver.query(Imps.Contacts.CRYPTO_ACCOUNT_URI, null, "_ID=1", null, null);
+            if (acct.getCount() > 0) {
+                int index = acct.getColumnIndex("shared_symmetric_key");
+                int index2 = acct.getColumnIndex("xmpp_user_name");
+                int index3 = acct.getColumnIndex("xmpp_password");
+
+                acct.moveToFirst();
+                String key = acct.getString(index);
+                String userName = acct.getString(index2);
+                String password = acct.getString(index3);
+                // System.out.println(key);
+
+            }
+
+        }
 
         String where = "";//Imps.Account.KEEP_SIGNED_IN + "=1 AND " + Imps.Account.ACTIVE + "=1";
         Cursor cursor = resolver.query(Imps.Account.CONTENT_URI, ACCOUNT_PROJECTION, where, null,

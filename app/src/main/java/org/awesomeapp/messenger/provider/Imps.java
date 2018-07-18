@@ -531,6 +531,10 @@ public class Imps {
         public static final Uri CONTENT_URI_ONLINE_COUNT = Uri
                 .parse("content://org.awesomeapp.messenger.provider.Imps/contacts/onlineCount");
 
+        /** [CRYPTO_TALK] The content:// style URL for this table */
+        public static final Uri CRYPTO_ACCOUNT_URI = Uri
+                .parse("content://com.deepdatago.provider.Crypto/account");
+
         /**
          * The MIME type of {@link #CONTENT_URI} providing a directory of
          * people.

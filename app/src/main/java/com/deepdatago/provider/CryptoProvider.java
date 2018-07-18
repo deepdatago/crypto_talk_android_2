@@ -29,6 +29,8 @@ public class CryptoProvider extends ContentProvider {
 
     static final String _ID = "_id";
     static final String SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
+    static final String XMPP_USER_NAME = "xmpp_user_name";
+    static final String XMPP_PASSOWRD = "xmpp_password";
     // static final String NAME = "name";
     // static final String GRADE = "grade";
 
@@ -63,7 +65,9 @@ public class CryptoProvider extends ContentProvider {
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + ACCOUNT_TABLE_NAME +
                     " (_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    " shared_symmetric_key TEXT NOT NULL);";
+                    " shared_symmetric_key TEXT NOT NULL, " +
+                    " xmpp_user_name TEXT, " +
+                    " xmpp_password TEXT);";
 
     private static final String[] ACCOUNT_PROJECTION = { _ID, SHARED_SYMMETRIC_KEY};
     /**

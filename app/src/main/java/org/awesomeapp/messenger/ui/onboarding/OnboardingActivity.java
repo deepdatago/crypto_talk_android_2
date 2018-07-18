@@ -4,12 +4,16 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -46,6 +50,7 @@ import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
+import com.deepdatago.account.AccountManagerImpl;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.awesomeapp.messenger.ImApp;
@@ -69,12 +74,26 @@ import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import com.deepdatago.account.AccountManager;
+
 import im.zom.messenger.BuildConfig;
 import im.zom.messenger.R;
+
 import org.awesomeapp.messenger.util.Languages;
+import org.ethereum.geth.Account;
+import org.json.JSONObject;
 
 public class OnboardingActivity extends BaseActivity {
 
@@ -199,7 +218,7 @@ public class OnboardingActivity extends BaseActivity {
                 showOnboarding();
             }
         });
-
+/*
         View btnStartOnboardingNext = viewSplash.findViewById(R.id.nextButton);
         btnStartOnboardingNext.setOnClickListener(new OnClickListener() {
             @Override
@@ -208,8 +227,7 @@ public class OnboardingActivity extends BaseActivity {
                 showOnboarding();
             }
         });
-
-
+*/
 
         View btnShowCreate = viewRegister.findViewById(R.id.btnShowRegister);
         btnShowCreate.setOnClickListener(new OnClickListener() {
@@ -222,7 +240,7 @@ public class OnboardingActivity extends BaseActivity {
 
         });
 
-        View btnShowLogin = viewRegister.findViewById(R.id.btnShowLogin);
+        View btnShowLogin = viewSplash.findViewById(R.id.btnShowLogin);
         btnShowLogin.setOnClickListener(new OnClickListener() {
 
             @Override
@@ -440,7 +458,10 @@ public class OnboardingActivity extends BaseActivity {
         }
         else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewLogin)
         {
-            showOnboarding();
+            if (mShowSplash)
+                showSplashScreen();
+            else
+                finish();
         }
         else if (mViewFlipper.getCurrentView().getId()==R.id.flipViewAdvanced)
         {
@@ -477,7 +498,6 @@ public class OnboardingActivity extends BaseActivity {
 
     private void showLoginScreen ()
     {
-
         mViewFlipper.setDisplayedChild(3);
         findViewById(R.id.progressExistingUser).setVisibility(View.GONE);
         findViewById(R.id.progressExistingImage).setVisibility(View.GONE);
@@ -639,7 +659,6 @@ public class OnboardingActivity extends BaseActivity {
 
         @Override
         protected void onPostExecute(OnboardingAccount account) {
-
             View viewCreate = findViewById(R.id.flipViewCreateNew);
             viewCreate.findViewById(R.id.progressImage).setVisibility(View.GONE);
 
@@ -742,8 +761,157 @@ public class OnboardingActivity extends BaseActivity {
 
     }
 
+    private String getSharedAsymmetricKey()
+    {
+        ContentResolver resolver = getContentResolver();
+        resolver.delete(Imps.Contacts.CRYPTO_ACCOUNT_URI,	"_id=1",null);
+
+        Cursor acct = resolver.query(Imps.Contacts.CRYPTO_ACCOUNT_URI, null, "_ID=1", null, null);
+
+        String symmetricKey = null;
+        if (acct.getCount() == 0)
+        {
+            ContentValues accountValue = new ContentValues(1);
+            // contactListValues.put(Imps.ContactList.NAME, list.getName());
+            UUID idOne = UUID.randomUUID();
+            symmetricKey = idOne.toString().replace("-", "");
+
+            accountValue.put("shared_symmetric_key", symmetricKey);
+
+            Uri uri = null;
+            uri = resolver.insert(Imps.Contacts.CRYPTO_ACCOUNT_URI, accountValue);
+            return symmetricKey;
+        }
+
+        int index = acct.getColumnIndex("shared_symmetric_key");
+        acct.moveToFirst();
+        symmetricKey = acct.getString(index);
+
+        return symmetricKey;
+    }
+
     private synchronized boolean doExistingAccountRegister ()
     {
+        String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
+        String sharedSymmetricKey = getSharedAsymmetricKey();
+        AccountManager accountManager = new AccountManagerImpl(getFilesDir(), creationPassword, sharedSymmetricKey);
+        final Account newAccount = accountManager.createAccount();
+
+        // Create a new HttpClient and Post Header
+        String url = "https://dev.deepdatago.com/service/accounts/register/";
+        JSONObject requestNode = new JSONObject();
+        try {
+            String registerRequest = accountManager.getRegisterRequest(newAccount, "testName");
+
+            MediaType mediaTypeJSON = MediaType.parse("application/json; charset=utf-8");
+
+            final OkHttpClient client = new OkHttpClient();
+            RequestBody body = RequestBody.create(mediaTypeJSON, registerRequest);
+
+            final Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build();
+
+            AsyncTask<Void, Void, String> asyncTask = new AsyncTask<Void, Void, String>() {
+                @Override
+                protected String doInBackground(Void... params) {
+                    try {
+                        Response response = client.newCall(request).execute();
+                        String responseBody = response.body().string();
+                        if (!response.isSuccessful()) {
+                            return null;
+                        }
+                        return responseBody;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+
+                @Override
+                protected void onPostExecute(String s) {
+                    super.onPostExecute(s);
+                    String username = null;
+                    String password = null;
+                    try {
+                        JSONObject jsonObj = new JSONObject(s);
+                        username = jsonObj.getString("xmppAccountNumber") + "@dev.deepdatago.com";
+                        password = jsonObj.getString("xmppAccountPassword");
+
+                    } catch (Exception e) {
+                        return;
+                    }
+
+                    ContentValues accountValue = new ContentValues(2);
+                    accountValue.put("xmpp_user_name", username);
+                    accountValue.put("xmpp_password", password);
+                    ContentResolver resolver = getContentResolver();
+                    resolver.update(Imps.Contacts.CRYPTO_ACCOUNT_URI, accountValue, "_id=1", null);
+
+
+                    // String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
+                    // String username = newAccount.getAddress().getHex();
+                    // String password = ((TextView)findViewById(R.id.edtPass)).getText().toString();
+
+                    if (verifyJabberID(username)) {
+
+                        if (mExistingAccountTask == null) {
+                            findViewById(R.id.progressExistingUser).setVisibility(View.VISIBLE);
+                            findViewById(R.id.progressExistingImage).setVisibility(View.VISIBLE);
+
+                            mExistingAccountTask = new ExistingAccountTask();
+                            mExistingAccountTask.execute(username, password);
+                        }
+                    }
+                    else
+                    {
+                        Toast.makeText(getBaseContext(),getString(R.string.account_setup_example_email_address),Toast.LENGTH_SHORT).show();
+                    }
+
+                }
+            };
+
+            asyncTask.execute();
+
+            /*
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    call.cancel();
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException {
+                    Log.d("TAG",response.body().string());
+                    ResponseBody responseBody = response.body();
+                    String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
+                    String password = ((TextView)findViewById(R.id.edtPass)).getText().toString();
+
+                    if (verifyJabberID(username)) {
+
+                        if (mExistingAccountTask == null) {
+                            findViewById(R.id.progressExistingUser).setVisibility(View.VISIBLE);
+                            findViewById(R.id.progressExistingImage).setVisibility(View.VISIBLE);
+
+                            mExistingAccountTask = new ExistingAccountTask();
+                            mExistingAccountTask.execute(username, password);
+                        }
+                    }
+                    else
+                    {
+                        Toast.makeText(getBaseContext(),getString(R.string.account_setup_example_email_address),Toast.LENGTH_SHORT).show();
+                    }
+
+                }
+
+            });
+            */
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        /*
         String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
         String password = ((TextView)findViewById(R.id.edtPass)).getText().toString();
 
@@ -763,7 +931,7 @@ public class OnboardingActivity extends BaseActivity {
         {
             Toast.makeText(this,getString(R.string.account_setup_example_email_address),Toast.LENGTH_SHORT).show();
         }
-
+        */
         return false;
     }
 
@@ -1105,10 +1273,5 @@ public class OnboardingActivity extends BaseActivity {
             startActivityForResult(getPickImageChooserIntent(), OnboardingManager.REQUEST_CHOOSE_AVATAR);
         }
     }
-
-
-
-
-
 
 }
