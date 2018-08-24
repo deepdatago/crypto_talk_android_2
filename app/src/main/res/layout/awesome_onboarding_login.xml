@@ -16,22 +16,23 @@ android:paddingTop="40dp"
     android:textSize="18dp"
     android:textColor="@android:color/black"
     />
-<!-- [CRYPTO_TALK]
+
+<!-- [CRYPTO_TALK] change to nick name -->
 <org.ironrabbit.type.CustomTypefaceEditText android:id="@+id/edtName"
     android:selectAllOnFocus="true"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:hint="@string/account_setup_example_email_address"
+    android:hint="@string/menu_contact_nickname"
     android:autoLink="none"
     android:cursorVisible="true"
-    android:inputType="textEmailAddress|textNoSuggestions"
+    android:inputType="textNoSuggestions"
     android:gravity="center"
     android:padding="6dp"
     android:textColor="?messageTextPrimary"
     android:background="@drawable/rounded_rect"
     android:layout_margin="3dp"
     />
--->
+
 <org.ironrabbit.type.CustomTypefaceEditText android:id="@+id/edtPass"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

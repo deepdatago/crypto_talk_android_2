@@ -51,6 +51,7 @@ import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.crypto.CryptoManagerImpl;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.awesomeapp.messenger.ImApp;
@@ -87,6 +88,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import com.deepdatago.account.AccountManager;
+import com.deepdatago.crypto.CryptoManager;
 
 import im.zom.messenger.BuildConfig;
 import im.zom.messenger.R;
@@ -215,7 +217,7 @@ public class OnboardingActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 setAnimLeft();
-                showOnboarding();
+                showLoginScreen();
             }
         });
 /*
@@ -793,15 +795,18 @@ public class OnboardingActivity extends BaseActivity {
     private synchronized boolean doExistingAccountRegister ()
     {
         String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
+        String creationNickname = ((TextView)findViewById(R.id.edtName)).getText().toString();
         String sharedSymmetricKey = getSharedAsymmetricKey();
         AccountManager accountManager = new AccountManagerImpl(getFilesDir(), creationPassword, sharedSymmetricKey);
+        CryptoManager cryptoManager = new CryptoManagerImpl();
+        mNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, creationNickname);
         final Account newAccount = accountManager.createAccount();
 
         // Create a new HttpClient and Post Header
         String url = "https://dev.deepdatago.com/service/accounts/register/";
         JSONObject requestNode = new JSONObject();
         try {
-            String registerRequest = accountManager.getRegisterRequest(newAccount, "testName");
+            String registerRequest = accountManager.getRegisterRequest(newAccount, mNickname);
 
             MediaType mediaTypeJSON = MediaType.parse("application/json; charset=utf-8");
 
