@@ -50,6 +50,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.deepdatago.account.Tags;
 import com.deepdatago.provider.CryptoProvider;
 import com.jrummyapps.android.shell.CommandResult;
 import com.jrummyapps.android.shell.Shell;
@@ -522,20 +523,20 @@ public class RemoteImService extends Service implements OtrEngineListener, ImSer
             // uri = resolver.insert(Imps.Contacts.CRYPTO_ACCOUNT_URI, accountValue);
             // listId = ContentUris.parseId(uri);
 
-
-            Cursor acct = resolver.query(Imps.Contacts.CRYPTO_ACCOUNT_URI, null, "_ID=1", null, null);
+            /* // [CRYPTO_TALK]
+            Cursor acct = resolver.query(Tags.CRYPTO_ACCOUNT_URI, null, "_ID=1", null, null);
             if (acct.getCount() > 0) {
-                int index = acct.getColumnIndex("shared_symmetric_key");
-                int index2 = acct.getColumnIndex("xmpp_user_name");
-                int index3 = acct.getColumnIndex("xmpp_password");
+                int index = acct.getColumnIndex(CryptoProvider.SHARED_SYMMETRIC_KEY);
+                int index2 = acct.getColumnIndex(CryptoProvider.XMPP_USER_NAME);
+                int index3 = acct.getColumnIndex(CryptoProvider.XMPP_PASSOWRD);
 
                 acct.moveToFirst();
                 String key = acct.getString(index);
                 String userName = acct.getString(index2);
                 String password = acct.getString(index3);
                 // System.out.println(key);
-
             }
+            */
 
         }
 

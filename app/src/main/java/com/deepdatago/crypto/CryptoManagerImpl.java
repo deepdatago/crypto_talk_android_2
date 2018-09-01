@@ -64,6 +64,8 @@ public class CryptoManagerImpl implements CryptoManager {
 	private final String certificateDescription = "CERTIFICATE";
 	private final String providerName = "BC"; // for bouncy castle
 	private final String commonName; // "CN=KeyManagerTest"
+	private static CryptoManagerImpl msCryptoManager = null;
+
 	public CryptoManagerImpl(String algorithm,
 			String signatureAlg, 
 			int keySize, 
@@ -86,6 +88,15 @@ public class CryptoManagerImpl implements CryptoManager {
     	Security.addProvider(new BouncyCastleProvider());
     	fixAESKeyLength();
 	}
+
+	public static CryptoManager getInstance() {
+		if (msCryptoManager != null) {
+			return msCryptoManager;
+		}
+		msCryptoManager = new CryptoManagerImpl();
+		return msCryptoManager;
+	}
+
 	public void generateKeyCertificate(String privKeyFileName, String publicKeyFileName, String certFileName) {
     	KeyPair keyPair;
     	PrivateKey privateKey;
@@ -210,7 +221,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		return null;
     }   	
     
-    public String encryptTextBase64(byte[] text, PublicKey key) throws Exception
+    public String encryptTextBase64(PublicKey key, byte[] text) throws Exception
     {
         byte[] cipherText = null;
         //
@@ -223,7 +234,7 @@ public class CryptoManagerImpl implements CryptoManager {
         return new String(Base64.encode(cipherText, Base64.DEFAULT));
     }    
     
-    public String decryptTextBase64(byte[] text, PrivateKey key) throws Exception
+    public String decryptTextBase64(PrivateKey key, byte[] text) throws Exception
     {
     	byte[] decodedBytes = Base64.decode(text, Base64.DEFAULT);
         byte[] dectyptedText = null;

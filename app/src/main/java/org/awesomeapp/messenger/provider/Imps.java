@@ -28,6 +28,8 @@ import android.os.Handler;
 import android.provider.BaseColumns;
 import android.util.Log;
 
+import com.deepdatago.account.Tags;
+
 import org.awesomeapp.messenger.ImApp;
 
 import java.util.HashMap;
@@ -532,8 +534,10 @@ public class Imps {
                 .parse("content://org.awesomeapp.messenger.provider.Imps/contacts/onlineCount");
 
         /** [CRYPTO_TALK] The content:// style URL for this table */
+        /*
         public static final Uri CRYPTO_ACCOUNT_URI = Uri
-                .parse("content://com.deepdatago.provider.Crypto/account");
+                .parse("content://com.deepdatago.provider.Crypto/" + Tags.ACCOUNT_TABLE_NAME);
+        */
 
         /**
          * The MIME type of {@link #CONTENT_URI} providing a directory of

@@ -64,6 +64,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.deepdatago.account.AccountManagerImpl;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
@@ -142,6 +143,9 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     public void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+
+        // [CRYPTO_TALK] set content resolver
+        AccountManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
 
         if (Preferences.doBlockScreenshots()) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,

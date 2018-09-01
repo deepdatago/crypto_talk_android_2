@@ -41,6 +41,7 @@ import android.database.Cursor;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.text.Spannable;
@@ -136,6 +137,18 @@ public class ContactListItem extends FrameLayout {
         }
         else
         {
+            final Uri localContactsUri = Uri
+                    .parse("content://org.awesomeapp.messenger.provider.Imps/contacts");
+            String [] localProjection = new String[] { Imps.Contacts.USERNAME, Imps.Contacts.NICKNAME};
+            Cursor contactCursor = getContext().getContentResolver().query(localContactsUri, localProjection, null, null, null);
+            int contactCount = contactCursor.getCount();
+            if (contactCount > 0) {
+
+                contactCursor.moveToPosition(0);
+                String localNick = contactCursor.getString(1);
+                String username = contactCursor.getString(0);
+                int a = 0;
+            }
             nickname = nickname.split("@")[0].split("\\.")[0];
         }
 

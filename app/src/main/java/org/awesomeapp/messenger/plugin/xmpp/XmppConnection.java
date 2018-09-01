@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.RemoteException;
 import android.support.v4.net.TrafficStatsCompat;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import org.awesomeapp.messenger.ImApp;
@@ -169,10 +170,12 @@ import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.CertificateException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -207,6 +210,21 @@ import eu.siacs.conversations.Downloader;
 import eu.siacs.conversations.Uploader;
 import im.zom.messenger.R;
 import info.guardianproject.netcipher.proxy.OrbotHelper;
+
+
+// [CRYPTO_TALK]
+import com.android.volley.*;
+import com.android.volley.toolbox.*;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import java.lang.InterruptedException;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
+import com.deepdatago.account.*;
+import org.ethereum.geth.Account;
+import java.security.PrivateKey;
+import com.deepdatago.crypto.*;
+
 
 public class XmppConnection extends ImConnection {
 
@@ -285,6 +303,11 @@ public class XmppConnection extends ImConnection {
 
     private final static String PRIVACY_LIST_DEFAULT = "defaultprivacylist";
 
+    // [CRYPTO_TALK]
+    // mDeepDatagoAccountManager cannot be instantiated in constructor, because the needed static members are not set yet
+    // it MUST be null-checked and instantiated within business logic
+    private AccountManager mDeepDatagoAccountManager = null;
+
     public XmppConnection(Context context) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
         super(context);
 
@@ -308,7 +331,6 @@ public class XmppConnection extends ImConnection {
         mSessionManager = new XmppChatSessionManager();
 
         mContactListManager = new XmppContactListManager();
-
 
     }
 
@@ -475,12 +497,23 @@ public class XmppConnection extends ImConnection {
 
                 if (!TextUtils.isEmpty(vCard.getNickName()))
                 {
-                    if (!vCard.getNickName().equals(contact.getName()))
-                    {
-                        contact.setName(vCard.getNickName());
-                        mContactListManager.doSetContactName(contact.getAddress().getBareAddress(), contact.getName());
-                    }
+                    // [CRYPTO_TALK] decrypt vCardNickName, if it's the same as contact.getName(), then do not set it
+                    String vCardNickName = vCard.getNickName();
+                    String contactUserName = contact.getAddress().getUser();
+                    // get symmetric_key_for_all_friends for user contactUserName, this is the key to decrypt nickname
+                    mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
 
+                    JSONObject keysObj = mDeepDatagoAccountManager.getFriendKeys(contactUserName);
+                    if (keysObj != null) {
+                        String keyForAllFriends = keysObj.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
+                        CryptoManager cryptoManager = com.deepdatago.crypto.CryptoManagerImpl.getInstance();
+                        String decryptedNickName = cryptoManager.decryptDataWithSymmetricKey(keyForAllFriends, vCardNickName);
+                        if (!decryptedNickName.equals(contact.getName()))
+                        {
+                            contact.setName(decryptedNickName);
+                            mContactListManager.doSetContactName(contact.getAddress().getBareAddress(), contact.getName());
+                        }
+                    }
                 }
 
                 //check for a forwarding address
@@ -3436,6 +3469,28 @@ public class XmppConnection extends ImConnection {
                 } catch (ImException e) {
                     debug(TAG, "could not add contact to list: " + e.getLocalizedMessage());
                 }
+            }
+            // [CRYPTO_TALK]
+            // contact.getName(); // 3724570f080259c02b05d91f80ac68a0bd486ad1
+            // AccountManager accountManager = new AccountManagerImpl(null);
+            mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+            final Account account = mDeepDatagoAccountManager.createAccount();
+            JSONArray responseArray = mDeepDatagoAccountManager.getFriendRequest(account.getAddress().getHex(), mContext);
+            try {
+                for (int i = 0; i < responseArray.length(); i++) {
+                    // set contact name to the matching responseObject
+                    JSONObject object = responseArray.getJSONObject(i);
+                    if (object.getString(Tags.FROM_ADDRESS).equalsIgnoreCase(contact.getName())) {
+                        String nickName = object.getString(Tags.NAME);
+                        if (nickName != null && nickName.length() > 0) {
+                            contact.setName(nickName);
+                        }
+                    }
+
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return;
             }
 
             ChatSession session = findOrCreateSession(contact.getAddress().toString(), false);

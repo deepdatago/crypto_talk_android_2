@@ -17,57 +17,49 @@ import android.net.Uri;
 import android.text.TextUtils;
 
 import java.util.HashMap;
+import com.deepdatago.account.*;
 
 /**
  * Created by tnnd on 7/15/18.
  */
 
 public class CryptoProvider extends ContentProvider {
-    static final String PROVIDER_NAME = "com.deepdatago.provider.CryptoProvider";
-    static final String URL = "content://" + PROVIDER_NAME + "/account";
-    static final Uri CONTENT_URI = Uri.parse(URL);
-
     static final String _ID = "_id";
-    static final String SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
-    static final String XMPP_USER_NAME = "xmpp_user_name";
-    static final String XMPP_PASSOWRD = "xmpp_password";
-    // static final String NAME = "name";
-    // static final String GRADE = "grade";
+    public static final String SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
 
     private static HashMap<String, String> STUDENTS_PROJECTION_MAP;
 
     static final int ACCOUNT = 1;
-    static final int ACCOUNT_ID = 2;
-
-    static final UriMatcher uriMatcher;
-    static{
-        uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        uriMatcher.addURI(PROVIDER_NAME, "/account", ACCOUNT);
-        uriMatcher.addURI(PROVIDER_NAME, "/account/#", ACCOUNT_ID);
-    }
+    static final int FRIEND = 2;
 
     /**
      * Database specific constant declarations
      */
 
     private SQLiteDatabase db;
-    static final String DATABASE_NAME = "Crypto";
-    // static final String STUDENTS_TABLE_NAME = "students";
-    static final String ACCOUNT_TABLE_NAME = "account";
-    static final int DATABASE_VERSION = 1;
-    /*
-    static final String CREATE_DB_TABLE =
-            " CREATE TABLE " + ACCOUNT_TABLE_NAME +
+    static final int DATABASE_VERSION = 4;
+
+    static final UriMatcher uriMatcher;
+    static{
+        uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+        uriMatcher.addURI(Tags.PROVIDER_NAME, "/" + Tags.ACCOUNT_TABLE_NAME, ACCOUNT);
+        uriMatcher.addURI(Tags.PROVIDER_NAME, "/" + Tags.FRIENDS_KEYS_TABLE_NAME, FRIEND);
+    }
+
+    static final String CREATE_FRIENDS_KEYS_TABLE =
+            " CREATE TABLE " + Tags.FRIENDS_KEYS_TABLE_NAME +
                     " (_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    " shared_symmetric_key TEXT NOT NULL, " +
-                    " grade TEXT NOT NULL);";
-    */
+                    Tags.DB_FIELD_ACCOUNT + " TEXT UNIQUE NOT NULL, " +
+                    Tags.DB_FIELD_PRIVATE_SYMMETRIC_KEY + " TEXT NOT NULL, " +
+                    Tags.DB_FIELD_SHARED_SYMMETRIC_KEY + " TEXT NOT NULL);";
+
     static final String CREATE_DB_TABLE =
-            " CREATE TABLE " + ACCOUNT_TABLE_NAME +
+            " CREATE TABLE " + Tags.ACCOUNT_TABLE_NAME +
                     " (_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    " shared_symmetric_key TEXT NOT NULL, " +
-                    " xmpp_user_name TEXT, " +
-                    " xmpp_password TEXT);";
+                    Tags.DB_FIELD_SHARED_SYMMETRIC_KEY + " TEXT NOT NULL, " +
+                    Tags.DB_FIELD_XMPP_USER_NAME + " TEXT, " +
+                    Tags.DB_FIELD_PASSOWRD + " TEXT, " +
+                    Tags.DB_FIELD_XMPP_PASSOWRD + " TEXT);";
 
     private static final String[] ACCOUNT_PROJECTION = { _ID, SHARED_SYMMETRIC_KEY};
     /**
@@ -77,18 +69,24 @@ public class CryptoProvider extends ContentProvider {
 
     private static class DatabaseHelper extends SQLiteOpenHelper {
         DatabaseHelper(Context context){
-            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+            super(context, Tags.DATABASE_NAME, null, DATABASE_VERSION);
         }
 
         @Override
         public void onCreate(SQLiteDatabase db) {
             db.execSQL(CREATE_DB_TABLE);
+            db.execSQL(CREATE_FRIENDS_KEYS_TABLE);
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            // db.execSQL("DROP TABLE IF EXISTS " +  FRIENDS_KEYS_TABLE_NAME);
+            // db.execSQL(CREATE_FRIENDS_KEYS_TABLE);
+            /*
             db.execSQL("DROP TABLE IF EXISTS " +  ACCOUNT_TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " +  FRIENDS_KEYS_TABLE_NAME);
             onCreate(db);
+            */
         }
     }
 
@@ -108,29 +106,79 @@ public class CryptoProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+        int UriTableType = uriMatcher.match(uri);
+        switch (UriTableType) {
+            case ACCOUNT:
+                return insertAccountTable(uri, values);
+            case FRIEND:
+                return insertFriendTable(uri, values);
+            default:
+        }
+        throw new SQLException("Failed to add a record into " + uri);
+    }
+
+    private Uri insertAccountTable(Uri uri, ContentValues values) {
+        // account table should only have 1 record
         Cursor c = query(uri,	ACCOUNT_PROJECTION,	null,null, null);
         int cursorCount = c.getCount();
 
+        final String URL = "content://" + Tags.PROVIDER_NAME + "/" + Tags.ACCOUNT_TABLE_NAME;
+        final Uri CONTENT_URI = Uri.parse(URL);
+
         if (cursorCount > 0)
         {
-            // delete(uri,	"_id=2",null);
+            // delete(uri,	"_id>1",null);
             // update only
-            int updateCount = update(uri, values, null, null);
+            int updateCount = update(uri, values, "_id=1", null);
             int index = c.getColumnIndex(_ID);
             c.moveToFirst();
             long rowID = c.getLong(index);
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
             getContext().getContentResolver().notifyChange(_uri, null);
             return _uri;
-
-
         }
 
-        /**
-         * Add a new student record
-         */
+        long rowID = db.insert(	Tags.ACCOUNT_TABLE_NAME, "", values);
 
-        long rowID = db.insert(	ACCOUNT_TABLE_NAME, "", values);
+        /**
+         * If record is added successfully
+         */
+        if (rowID > 0) {
+            Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
+            getContext().getContentResolver().notifyChange(_uri, null);
+            return _uri;
+        }
+
+        throw new SQLException("Failed to add a record into " + uri);
+    }
+
+    private Uri insertFriendTable(Uri uri, ContentValues values) {
+        // account table should only have 1 record
+        final String[] projection = { Tags.DB_FIELD_ACCOUNT };
+
+        String account = values.get(Tags.DB_FIELD_ACCOUNT).toString().replace("0x", "");
+
+        String selection = Tags.DB_FIELD_ACCOUNT + "='" + account+"'";
+
+        Cursor c = query(uri,	projection,	selection,null, null);
+        int cursorCount = c.getCount();
+
+        final String URL = "content://" + Tags.PROVIDER_NAME + "/" + Tags.FRIENDS_KEYS_TABLE_NAME;
+        final Uri CONTENT_URI = Uri.parse(URL);
+
+        if (cursorCount > 0)
+        {
+            // update only
+            int updateCount = update(uri, values, selection, null);
+            int index = c.getColumnIndex(_ID);
+            c.moveToFirst();
+            long rowID = c.getLong(index);
+            Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
+            getContext().getContentResolver().notifyChange(_uri, null);
+            return _uri;
+        }
+
+        long rowID = db.insert(	Tags.FRIENDS_KEYS_TABLE_NAME, "", values);
 
         /**
          * If record is added successfully
@@ -148,7 +196,18 @@ public class CryptoProvider extends ContentProvider {
     public Cursor query(Uri uri, String[] projection,
                         String selection,String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
-        qb.setTables(ACCOUNT_TABLE_NAME);
+        int UriTableType = uriMatcher.match(uri);
+        switch (UriTableType) {
+            case ACCOUNT:
+                qb.setTables(Tags.ACCOUNT_TABLE_NAME);
+                break;
+            case FRIEND:
+                qb.setTables(Tags.FRIENDS_KEYS_TABLE_NAME);
+                break;
+            default:
+                return null;
+        }
+
         /*
         switch (uriMatcher.match(uri)) {
             case STUDENTS:
@@ -194,7 +253,17 @@ public class CryptoProvider extends ContentProvider {
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
         */
-        count = db.delete(ACCOUNT_TABLE_NAME, selection, selectionArgs);
+        int UriTableType = uriMatcher.match(uri);
+        switch (UriTableType) {
+            case ACCOUNT:
+                count = db.delete(Tags.ACCOUNT_TABLE_NAME, selection, selectionArgs);
+                break;
+            case FRIEND:
+                count = db.delete(Tags.FRIENDS_KEYS_TABLE_NAME, selection, selectionArgs);
+                break;
+            default:
+                return 0;
+        }
 
         getContext().getContentResolver().notifyChange(uri, null);
         return count;
@@ -219,7 +288,17 @@ public class CryptoProvider extends ContentProvider {
                 throw new IllegalArgumentException("Unknown URI " + uri );
         }
         */
-        count = db.update(ACCOUNT_TABLE_NAME, values, selection, selectionArgs);
+        int UriTableType = uriMatcher.match(uri);
+        switch (UriTableType) {
+            case ACCOUNT:
+                count = db.update(Tags.ACCOUNT_TABLE_NAME, values, selection, selectionArgs);
+                break;
+            case FRIEND:
+                count = db.update(Tags.FRIENDS_KEYS_TABLE_NAME, values, selection, selectionArgs);
+                break;
+            default:
+                return 0;
+        }
 
         getContext().getContentResolver().notifyChange(uri, null);
         return count;
@@ -228,16 +307,8 @@ public class CryptoProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         switch (uriMatcher.match(uri)){
-            /**
-             * Get all student records
-             */
             case ACCOUNT:
                 return "vnd.android.cursor.dir/vnd.example.account";
-            /**
-             * Get a particular student
-             */
-            case ACCOUNT_ID:
-                return "vnd.android.cursor.item/vnd.example.account";
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
         }

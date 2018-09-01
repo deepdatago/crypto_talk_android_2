@@ -57,7 +57,7 @@ public interface CryptoManager {
 	 * @param  key public key that is used to encrypt the given byte[]
 	 * @return      Base64 encoded string of encrypted byte[]
 	 */	
-    public String encryptTextBase64(byte[] text, PublicKey key) throws Exception;
+    public String encryptTextBase64(PublicKey key, byte[] text) throws Exception;
 
 	/**
 	 * Decrypt a byte[] which is Base64 encoded with given private key
@@ -66,7 +66,7 @@ public interface CryptoManager {
 	 * @param  key private key that is used to decrypt the given byte[]
 	 * @return      Plain text of the encrypted byte[]
 	 */	    
-    public String decryptTextBase64(byte[] text, PrivateKey key) throws Exception;
+    public String decryptTextBase64(PrivateKey key, byte[] text) throws Exception;
 
 	/**
 	 * Encrypt a string with given symmetric key

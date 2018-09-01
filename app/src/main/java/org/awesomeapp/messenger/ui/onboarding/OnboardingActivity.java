@@ -52,6 +52,7 @@ import android.widget.ViewFlipper;
 
 import com.deepdatago.account.AccountManagerImpl;
 import com.deepdatago.crypto.CryptoManagerImpl;
+import com.deepdatago.provider.CryptoProvider;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.awesomeapp.messenger.ImApp;
@@ -96,6 +97,7 @@ import im.zom.messenger.R;
 import org.awesomeapp.messenger.util.Languages;
 import org.ethereum.geth.Account;
 import org.json.JSONObject;
+import com.deepdatago.account.*;
 
 public class OnboardingActivity extends BaseActivity {
 
@@ -127,6 +129,9 @@ public class OnboardingActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // [CRYPTO_TALK] set content resolver
+        AccountManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
 
         mShowSplash = getIntent().getBooleanExtra("showSplash",true);
 
@@ -762,7 +767,7 @@ public class OnboardingActivity extends BaseActivity {
         startActivity(intent);
 
     }
-
+    /*
     private String getSharedAsymmetricKey()
     {
         ContentResolver resolver = getContentResolver();
@@ -791,19 +796,20 @@ public class OnboardingActivity extends BaseActivity {
 
         return symmetricKey;
     }
-
+    */
     private synchronized boolean doExistingAccountRegister ()
     {
-        String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
+        final String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
         String creationNickname = ((TextView)findViewById(R.id.edtName)).getText().toString();
-        String sharedSymmetricKey = getSharedAsymmetricKey();
-        AccountManager accountManager = new AccountManagerImpl(getFilesDir(), creationPassword, sharedSymmetricKey);
+        final AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance(creationPassword);
+
+        String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
         CryptoManager cryptoManager = new CryptoManagerImpl();
         mNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, creationNickname);
         final Account newAccount = accountManager.createAccount();
 
         // Create a new HttpClient and Post Header
-        String url = "https://dev.deepdatago.com/service/accounts/register/";
+        String url = Tags.BASE_URL + Tags.ACCOUNT_REGISTER_API;
         JSONObject requestNode = new JSONObject();
         try {
             String registerRequest = accountManager.getRegisterRequest(newAccount, mNickname);
@@ -849,10 +855,10 @@ public class OnboardingActivity extends BaseActivity {
                     }
 
                     ContentValues accountValue = new ContentValues(2);
-                    accountValue.put("xmpp_user_name", username);
-                    accountValue.put("xmpp_password", password);
+                    accountValue.put(Tags.DB_FIELD_XMPP_USER_NAME, username);
+                    accountValue.put(Tags.DB_FIELD_XMPP_PASSOWRD, password);
                     ContentResolver resolver = getContentResolver();
-                    resolver.update(Imps.Contacts.CRYPTO_ACCOUNT_URI, accountValue, "_id=1", null);
+                    resolver.update(Tags.CRYPTO_ACCOUNT_URI, accountValue, "_ID=1", null);
 
 
                     // String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
