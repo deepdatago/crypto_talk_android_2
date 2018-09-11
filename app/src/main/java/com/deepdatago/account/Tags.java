@@ -10,6 +10,7 @@ public class Tags {
     /* API related */
     static public String BASE_URL = "https://dev.deepdatago.com/service/";
     static public String REQUEST_SUMMARY_API = "request/summary/?";
+    static public String FRIEND_REQUEST_API = "request/friend/";
     static public String GET_PUBLIC_KEY_API = "accounts/get_public_key/";
     static public String ACCOUNT_REGISTER_API = "accounts/register/";
 
@@ -18,6 +19,7 @@ public class Tags {
     static public String ACCOUNT_TABLE_NAME = "account";
     static public String FRIENDS_KEYS_TABLE_NAME = "friends_keys";
 
+    static public String DB_FIELD_PRIMARY_ID = "_ID";
     static public String DB_FIELD_SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
     static public String DB_FIELD_PRIVATE_SYMMETRIC_KEY = "private_symmetric_key";
     static public String DB_FIELD_ACCOUNT = "account";

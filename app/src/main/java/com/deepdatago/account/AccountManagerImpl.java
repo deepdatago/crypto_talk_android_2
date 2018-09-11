@@ -52,6 +52,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import com.squareup.okhttp.*;
+import com.squareup.okhttp.MediaType;
 
 /**
  * Created by tnnd on 7/5/18.
@@ -319,6 +320,35 @@ public class AccountManagerImpl implements AccountManager {
         return null;
     }
 
+    private JSONObject sendPostRequestSync(String iURL, JSONObject iBodyContent) {
+        OkHttpClient client = new OkHttpClient();
+
+        if (iBodyContent == null) {
+            return null;
+        }
+
+        final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(JSON_MEDIA_TYPE, iBodyContent.toString());
+
+        com.squareup.okhttp.Request request = new com.squareup.okhttp.Request.Builder()
+                .url(iURL)
+                .post(body)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            if (response.code() != 200) {
+                return null;
+            }
+            String responseStr = response.body().string();
+            JSONObject responseObj = new JSONObject(responseStr);
+            return responseObj;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private String getPrivateKeyFileName() {
         String privateKeyName = sFileDirectory + "/" + this.mKeyStoreName + "/" + this.mPrivateKeyName;
         return privateKeyName;
@@ -369,8 +399,9 @@ public class AccountManagerImpl implements AccountManager {
             return null;
         }
         // ContentResolver lResolver = new ContentResolver
-
-        Cursor acct = sContentResolver.query(Tags.CRYPTO_ACCOUNT_URI, null, "_ID=1", null, null);
+        final String[] projection = { Tags.DB_FIELD_SHARED_SYMMETRIC_KEY};
+        String selection = Tags.DB_FIELD_PRIMARY_ID + "=1";
+        Cursor acct = sContentResolver.query(Tags.CRYPTO_ACCOUNT_URI, projection, selection, null, null);
 
         String symmetricKey = null;
         if (acct.getCount() == 0)
@@ -380,14 +411,14 @@ public class AccountManagerImpl implements AccountManager {
             UUID idOne = UUID.randomUUID();
             symmetricKey = idOne.toString().replace("-", "");
 
-            accountValue.put(CryptoProvider.SHARED_SYMMETRIC_KEY, symmetricKey);
+            accountValue.put(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, symmetricKey);
 
             Uri uri = null;
             uri = sContentResolver.insert(Tags.CRYPTO_ACCOUNT_URI, accountValue);
             return symmetricKey;
         }
 
-        int index = acct.getColumnIndex("shared_symmetric_key");
+        int index = acct.getColumnIndex(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY);
         acct.moveToFirst();
         symmetricKey = acct.getString(index);
 
@@ -551,7 +582,9 @@ public class AccountManagerImpl implements AccountManager {
             if (requestType == Tags.FriendRequest) {
                 signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, ""); // need to encrypt by public key
             }
-            signedRequestNode.put(Tags.ALL_FRIENDS_SYMMETRIC_KEY, ""); // need to encrypt by public key
+            String allFriendsSharedKey = getSharedAsymmetricKey();
+            String encryptedAllFriendsKey = cryptoManager.encryptTextBase64(publicKey, allFriendsSharedKey.getBytes());
+            signedRequestNode.put(Tags.ALL_FRIENDS_SYMMETRIC_KEY, encryptedAllFriendsKey); // need to encrypt by public key
             // AccountManager accountManager = AccountManagerImpl.getInstance();
             Account account = createAccount();
             String addressStr = account.getAddress().getHex();
@@ -559,9 +592,16 @@ public class AccountManagerImpl implements AccountManager {
 
             JSONObject requestNode = new JSONObject();
             requestNode.put(Tags.ACTION_TYPE, requestType);
-            requestNode.put(Tags.TO_ADDRESS, "0x" + toAccount);
-            requestNode.put(Tags.FROM_ADDRESS, addressStr);
+            requestNode.put(Tags.FROM_ADDRESS, "0x" + toAccount);
+            requestNode.put(Tags.TO_ADDRESS, addressStr);
             requestNode.put(Tags.REQUEST, transactionStr);
+
+            String lURL = Tags.BASE_URL + Tags.FRIEND_REQUEST_API;
+
+            JSONObject response = sendPostRequestSync(lURL, requestNode);
+            if (response == null) {
+                // error occurred
+            }
 
         } catch (Exception e) {
             e.printStackTrace();

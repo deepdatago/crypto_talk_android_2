@@ -24,9 +24,6 @@ import com.deepdatago.account.*;
  */
 
 public class CryptoProvider extends ContentProvider {
-    static final String _ID = "_id";
-    public static final String SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
-
     private static HashMap<String, String> STUDENTS_PROJECTION_MAP;
 
     static final int ACCOUNT = 1;
@@ -48,20 +45,20 @@ public class CryptoProvider extends ContentProvider {
 
     static final String CREATE_FRIENDS_KEYS_TABLE =
             " CREATE TABLE " + Tags.FRIENDS_KEYS_TABLE_NAME +
-                    " (_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    " (" + Tags.DB_FIELD_PRIMARY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     Tags.DB_FIELD_ACCOUNT + " TEXT UNIQUE NOT NULL, " +
                     Tags.DB_FIELD_PRIVATE_SYMMETRIC_KEY + " TEXT NOT NULL, " +
                     Tags.DB_FIELD_SHARED_SYMMETRIC_KEY + " TEXT NOT NULL);";
 
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + Tags.ACCOUNT_TABLE_NAME +
-                    " (_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    " (" + Tags.DB_FIELD_PRIMARY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     Tags.DB_FIELD_SHARED_SYMMETRIC_KEY + " TEXT NOT NULL, " +
                     Tags.DB_FIELD_XMPP_USER_NAME + " TEXT, " +
                     Tags.DB_FIELD_PASSOWRD + " TEXT, " +
                     Tags.DB_FIELD_XMPP_PASSOWRD + " TEXT);";
 
-    private static final String[] ACCOUNT_PROJECTION = { _ID, SHARED_SYMMETRIC_KEY};
+    private static final String[] ACCOUNT_PROJECTION = {Tags.DB_FIELD_PRIMARY_ID, Tags.DB_FIELD_SHARED_SYMMETRIC_KEY};
     /**
      * Helper class that actually creates and manages
      * the provider's underlying data repository.
@@ -129,8 +126,9 @@ public class CryptoProvider extends ContentProvider {
         {
             // delete(uri,	"_id>1",null);
             // update only
-            int updateCount = update(uri, values, "_id=1", null);
-            int index = c.getColumnIndex(_ID);
+            String selection = Tags.DB_FIELD_PRIMARY_ID + "=1";
+            int updateCount = update(uri, values, selection, null);
+            int index = c.getColumnIndex(Tags.DB_FIELD_PRIMARY_ID);
             c.moveToFirst();
             long rowID = c.getLong(index);
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
@@ -170,7 +168,7 @@ public class CryptoProvider extends ContentProvider {
         {
             // update only
             int updateCount = update(uri, values, selection, null);
-            int index = c.getColumnIndex(_ID);
+            int index = c.getColumnIndex(Tags.DB_FIELD_PRIMARY_ID);
             c.moveToFirst();
             long rowID = c.getLong(index);
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
