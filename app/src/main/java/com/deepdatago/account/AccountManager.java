@@ -6,7 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import android.content.Context;
-
+import java.security.PublicKey;
 /**
  * Created by tnnd on 7/5/18.
  */
@@ -34,9 +34,19 @@ public interface AccountManager {
      * Generate get summary request
      *
      * @param   requestAccount: account that has summary info
+     * @param   contextForHTTP: context to send HTTP request
      * @return      get summary URL
      */
-    public JSONArray getFriendRequest(String requestAccount, Context contextForHTTP);
+    public JSONArray getSummary(String requestAccount, Context contextForHTTP);
+
+    /**
+     * Send or approve friend request, synchronous call
+     *
+     * @param   toAccount: account that should receive the request
+     * @param   requestType: whether it's request friend, or approve friend request
+     * @return
+     */
+    public void friendRequestSync(String toAccount, int requestType);
 
     /**
      * Generate signed transaction
@@ -69,5 +79,13 @@ public interface AccountManager {
      * @return      JSON object that has all keys info
      */
     public JSONObject getFriendKeys(String account);
+
+    /**
+     * get public key
+     *
+     * @param   address: address that the public key is requested for
+     * @return      public key
+     */
+    public PublicKey getPublicKey(String address);
 
 }

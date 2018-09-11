@@ -142,13 +142,11 @@ public class ContactListItem extends FrameLayout {
             String [] localProjection = new String[] { Imps.Contacts.USERNAME, Imps.Contacts.NICKNAME};
             Cursor contactCursor = getContext().getContentResolver().query(localContactsUri, localProjection, null, null, null);
             int contactCount = contactCursor.getCount();
-            if (contactCount > 0) {
 
-                contactCursor.moveToPosition(0);
-                String localNick = contactCursor.getString(1);
-                String username = contactCursor.getString(0);
-                int a = 0;
-            }
+
+            contactCursor.moveToPosition(0);
+            String localNick = contactCursor.getString(1);
+            String username = contactCursor.getString(0);
             nickname = nickname.split("@")[0].split("\\.")[0];
         }
 

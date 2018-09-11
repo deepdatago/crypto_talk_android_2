@@ -39,6 +39,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
+// import javax.crypto.spec.SecretKeySpec.PKCS;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -52,6 +53,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
+
 import android.util.Log;
 
 public class CryptoManagerImpl implements CryptoManager {
@@ -90,10 +92,13 @@ public class CryptoManagerImpl implements CryptoManager {
 	}
 
 	public static CryptoManager getInstance() {
-		if (msCryptoManager != null) {
-			return msCryptoManager;
+		if (msCryptoManager == null) {
+			synchronized (CryptoManagerImpl.class) {
+				if (msCryptoManager == null) {
+					msCryptoManager = new CryptoManagerImpl();
+				}
+			}
 		}
-		msCryptoManager = new CryptoManagerImpl();
 		return msCryptoManager;
 	}
 
@@ -154,6 +159,34 @@ public class CryptoManagerImpl implements CryptoManager {
 			e.printStackTrace();
 			return;
 		}
+	}
+
+	public PublicKey loadPublicKeyFromRSAPEMString(String publicKeyStr) {
+		try {
+			String instanceName = "RSA"; // RSA
+			KeyFactory factory = KeyFactory.getInstance(instanceName, this.providerName);
+			byte[] keyBytes = Base64.decode(publicKeyStr, Base64.DEFAULT);
+			/*
+			String tmpStr = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhduH6p/KZcbvgCmJPsaS\n" +
+					"/xt4uPQtlnIP1MnSGpKkFTwC5bLKfNpTYm8NAgjoOsdlNgVK+KJUzyewkkS17Oo0\n" +
+					"5QejUatkH+neIdymWEJsWmFK1JgaBy+tVquPj9IhqMtQv3njGllEHU1Sk9X6TRRS\n" +
+					"a2HrdNAX1fX1PKvt4V5EMVULiGEptM0A7JvI+GX4IdWhh63irAqlTQIqY2zPjlhg\n" +
+					"5mM6qOmtZSGnwc/Q8hAmZ0OTbmR1vSr/ow8t20jmEAsTMbdIPpg+kXaS+skxkR5V\n" +
+					"QeY7dCQyrnqLqJawZadFqzClHbMVNPV44q3EV0nwamjkGEpwaZzWs3sGsKSi5AET\n" +
+					"bQIDAQAB";
+			keyBytes = Base64.decode(tmpStr, Base64.DEFAULT);
+			*/
+
+			X509EncodedKeySpec privKeySpec =
+					new X509EncodedKeySpec(keyBytes);
+
+			PublicKey publicKey = factory.generatePublic(privKeySpec);
+			return publicKey;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public PublicKey loadPublicKeyFromRSAPEM(String fileName) 

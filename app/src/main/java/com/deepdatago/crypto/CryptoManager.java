@@ -49,7 +49,15 @@ public interface CryptoManager {
 		NoSuchAlgorithmException,
 		NoSuchProviderException,
 		InvalidKeySpecException;
-	
+
+	/**
+	 * Generate public key from a RSA public key PEM string format
+	 *
+	 * @param  publicKeyStr  public key as String
+	 * @return      PublicKey
+	 */
+	public PublicKey loadPublicKeyFromRSAPEMString(String publicKeyStr);
+
 	/**
 	 * Encrypt a byte[] with given public key, and encode it with Base64
 	 *

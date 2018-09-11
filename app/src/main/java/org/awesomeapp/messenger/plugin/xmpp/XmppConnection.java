@@ -174,6 +174,7 @@ import java.net.URLEncoder;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertificateException;
@@ -3475,7 +3476,7 @@ public class XmppConnection extends ImConnection {
             // AccountManager accountManager = new AccountManagerImpl(null);
             mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
             final Account account = mDeepDatagoAccountManager.createAccount();
-            JSONArray responseArray = mDeepDatagoAccountManager.getFriendRequest(account.getAddress().getHex(), mContext);
+            JSONArray responseArray = mDeepDatagoAccountManager.getSummary(account.getAddress().getHex(), mContext);
             try {
                 for (int i = 0; i < responseArray.length(); i++) {
                     // set contact name to the matching responseObject
@@ -3558,73 +3559,88 @@ public class XmppConnection extends ImConnection {
         @Override
         public void approveSubscriptionRequest(final Contact contact) {
 
+            Thread thread = new Thread(new Runnable() {
 
-            try {
+                @Override
+                public void run() {
+                    try {
+                        // [CRYPTO_TALK] approve friend request
+                        {
+                            String toAddress = contact.getAddress().getUser();
+                            mDeepDatagoAccountManager = AccountManagerImpl.getInstance();
 
-                BareJid bareJid = JidCreate.bareFrom(contact.getAddress().getBareAddress());
-                RosterEntry entry = mRoster.getEntry(bareJid);
-                if (entry == null)
-                    mRoster.createEntry(bareJid,contact.getName(),null);
+                            mDeepDatagoAccountManager.friendRequestSync(toAddress, Tags.ApproveRequest);
+                        }
 
-                entry = mRoster.getEntry(bareJid);
+                        BareJid bareJid = JidCreate.bareFrom(contact.getAddress().getBareAddress());
+                        RosterEntry entry = mRoster.getEntry(bareJid);
+                        if (entry == null)
+                            mRoster.createEntry(bareJid,contact.getName(),null);
 
-                int subType = Imps.Contacts.SUBSCRIPTION_TYPE_BOTH;
-                int subStatus = Imps.Contacts.SUBSCRIPTION_STATUS_NONE;
+                        entry = mRoster.getEntry(bareJid);
 
-                org.jivesoftware.smack.packet.Presence response = new org.jivesoftware.smack.packet.Presence(
-                        org.jivesoftware.smack.packet.Presence.Type.subscribed);
-                response.setTo(bareJid);
+                        int subType = Imps.Contacts.SUBSCRIPTION_TYPE_BOTH;
+                        int subStatus = Imps.Contacts.SUBSCRIPTION_STATUS_NONE;
 
-                //send now, or queue
-                if (mConnection != null && mConnection.isAuthenticated())
-                    mConnection.sendStanza(response);
-                else
-                    sendPacket(response);
+                        org.jivesoftware.smack.packet.Presence response = new org.jivesoftware.smack.packet.Presence(
+                                org.jivesoftware.smack.packet.Presence.Type.subscribed);
+                        response.setTo(bareJid);
 
-                /**
-                if (!entry.canSeeHisPresence()) {
+                        //send now, or queue
+                        if (mConnection != null && mConnection.isAuthenticated())
+                            mConnection.sendStanza(response);
+                        else
+                            sendPacket(response);
 
-                    //send now, or queue
-                    if (mConnection != null && mConnection.isAuthenticated())
-                        mRoster.sendSubscriptionRequest(bareJid);
-                    else {
-                        org.jivesoftware.smack.packet.Presence request = new org.jivesoftware.smack.packet.Presence(
-                                org.jivesoftware.smack.packet.Presence.Type.subscribe);
-                        request.setTo(bareJid);
-                        sendPacket(request);
+                        /**
+                         if (!entry.canSeeHisPresence()) {
+
+                         //send now, or queue
+                         if (mConnection != null && mConnection.isAuthenticated())
+                         mRoster.sendSubscriptionRequest(bareJid);
+                         else {
+                         org.jivesoftware.smack.packet.Presence request = new org.jivesoftware.smack.packet.Presence(
+                         org.jivesoftware.smack.packet.Presence.Type.subscribe);
+                         request.setTo(bareJid);
+                         sendPacket(request);
+                         }
+
+                         subType = Imps.Contacts.SUBSCRIPTION_TYPE_FROM;
+                         }**/
+
+                        contact.setSubscriptionStatus(subStatus);
+                        contact.setSubscriptionType(subType);
+
+                        mContactListManager.getSubscriptionRequestListener().onSubscriptionApproved(contact, mProviderId, mAccountId);
+                        getSubscriptionRequestListener().onSubScriptionChanged(contact,mProviderId,mAccountId,subType,subStatus);
+
+                        ChatSession session = findOrCreateSession(contact.getAddress().toString(), false);
+
+                        if (session != null)
+                            session.setSubscribed(true);
+
+                        if (entry != null && entry.canSeeHisPresence()) {
+
+                            requestPresenceRefresh(contact.getAddress().getBareAddress());
+                            qAvatar.put(contact.getAddress().getAddress(),"");
+
+                            if (getOmemo().getManager().contactSupportsOmemo(bareJid)) {
+                                getOmemo().getManager().requestDeviceListUpdateFor(bareJid);
+                                getOmemo().getManager().buildSessionsWith(bareJid);
+                            }
+                        }
+
+
                     }
+                    catch (Exception e) {
+                        debug (TAG, "error responding to subscription approval: " + e.getLocalizedMessage());
 
-                    subType = Imps.Contacts.SUBSCRIPTION_TYPE_FROM;
-                }**/
-
-                contact.setSubscriptionStatus(subStatus);
-                contact.setSubscriptionType(subType);
-
-                mContactListManager.getSubscriptionRequestListener().onSubscriptionApproved(contact, mProviderId, mAccountId);
-                getSubscriptionRequestListener().onSubScriptionChanged(contact,mProviderId,mAccountId,subType,subStatus);
-
-                ChatSession session = findOrCreateSession(contact.getAddress().toString(), false);
-
-                if (session != null)
-                    session.setSubscribed(true);
-
-                if (entry != null && entry.canSeeHisPresence()) {
-
-                    requestPresenceRefresh(contact.getAddress().getBareAddress());
-                    qAvatar.put(contact.getAddress().getAddress(),"");
-
-                    if (getOmemo().getManager().contactSupportsOmemo(bareJid)) {
-                        getOmemo().getManager().requestDeviceListUpdateFor(bareJid);
-                        getOmemo().getManager().buildSessionsWith(bareJid);
                     }
                 }
+            });
+            thread.start();
 
 
-            }
-            catch (Exception e) {
-                debug (TAG, "error responding to subscription approval: " + e.getLocalizedMessage());
-
-            }
 
         }
 

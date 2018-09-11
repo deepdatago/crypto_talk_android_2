@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URLEncoder;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -50,6 +51,7 @@ import org.ethereum.geth.Transaction;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
+import com.squareup.okhttp.*;
 
 /**
  * Created by tnnd on 7/5/18.
@@ -81,7 +83,7 @@ public class AccountManagerImpl implements AccountManager {
         // this.mCreationPassword = creationPassword;
         this.mSymmetricKeyForAllFriends = getSharedAsymmetricKey();
 
-        this.mCryptoManager = new CryptoManagerImpl();
+        this.mCryptoManager = CryptoManagerImpl.getInstance();
 
         this.mNodeConfig.setEthereumNetworkID(1);
         BigInt chain = new BigInt(this.mNodeConfig.getEthereumNetworkID());
@@ -99,21 +101,21 @@ public class AccountManagerImpl implements AccountManager {
     }
 
     public static AccountManager getInstance() {
-        if (msAccountManager != null) {
+        if (msAccountManager == null) {
+            synchronized (AccountManagerImpl.class) {
+                if(msAccountManager == null) {
+                    msAccountManager = new AccountManagerImpl();
+                }
+            }
             return msAccountManager;
         }
-        msAccountManager = new AccountManagerImpl();
         return msAccountManager;
     }
 
     public static AccountManager getInstance(String password) {
-        if (msAccountManager != null) {
-            msAccountManager.saveAccountPassword(password);
-            return msAccountManager;
-        }
-        msAccountManager = new AccountManagerImpl();
-        msAccountManager.saveAccountPassword(password);
-        return msAccountManager;
+        AccountManager accountManage = AccountManagerImpl.getInstance();
+        accountManage.saveAccountPassword(password);
+        return accountManage;
     }
 
     public Account createAccount() {
@@ -209,7 +211,7 @@ public class AccountManagerImpl implements AccountManager {
         return returnStr;
     }
 
-    public JSONArray getFriendRequest(String requestAccount, android.content.Context contextForHTTP) {
+    public JSONArray getSummary(String requestAccount, android.content.Context contextForHTTP) {
 
         long unixTime = System.currentTimeMillis() / 1000L;
         String timeString = Long.toString(unixTime);
@@ -225,13 +227,7 @@ public class AccountManagerImpl implements AccountManager {
         lURL += Tags.TIME_STAMP + "=" + timeString + "&";
         lURL += Tags.ENCODED_SIGNATURE + "=" + transactionStr;
 
-        RequestFuture<JSONObject> requestFuture=RequestFuture.newFuture();
-        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET,
-                lURL,new JSONObject(),requestFuture,requestFuture);
-        RequestQueue queue = Volley.newRequestQueue(contextForHTTP);
-        queue.add(request);
-
-        JSONObject responseObject = sendGetRequestSync(lURL, contextForHTTP);
+        JSONObject responseObject = sendGetRequestSync(lURL);
         if (responseObject == null) {
             return null;
         }
@@ -289,7 +285,22 @@ public class AccountManagerImpl implements AccountManager {
         return returnArray;
     }
 
-    private JSONObject sendGetRequestSync(String iURL, android.content.Context contextForHTTP) {
+    private JSONObject sendGetRequestSync(String iURL) {
+        OkHttpClient client = new OkHttpClient();
+
+        com.squareup.okhttp.Request request = new com.squareup.okhttp.Request.Builder()
+                .url(iURL)
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            String responseStr = response.body().string();
+            JSONObject responseObj = new JSONObject(responseStr);
+            return responseObj;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        /*
         RequestFuture<JSONObject> requestFuture=RequestFuture.newFuture();
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET,
                 iURL,new JSONObject(),requestFuture,requestFuture);
@@ -304,6 +315,7 @@ public class AccountManagerImpl implements AccountManager {
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
         }
+        */
         return null;
     }
 
@@ -483,6 +495,77 @@ public class AccountManagerImpl implements AccountManager {
         }
 
         return null;
+    }
+
+    public PublicKey getPublicKey(String address) {
+        String lURL = Tags.BASE_URL + Tags.GET_PUBLIC_KEY_API;
+        lURL += address.toUpperCase() + "/";
+
+        JSONObject responseObject = sendGetRequestSync(lURL);
+        if (responseObject != null) {
+            try {
+                String publicKey = responseObject.getString(Tags.PUBLIC_KEY);
+                if (publicKey != null) {
+                    // remove 2
+                    // first end of line
+                    int firstEOL = publicKey.indexOf('\n');
+                    int secondEOL = publicKey.lastIndexOf('\n');
+                    String publicKey2 = publicKey.substring(firstEOL+1, secondEOL);
+
+                    PublicKey lPublicKey = this.mCryptoManager.loadPublicKeyFromRSAPEMString(publicKey2);
+                    return lPublicKey;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        return null;
+    }
+
+    public void friendRequestSync(final String toAccount, final int requestType) {
+        // JSON structure of friend request:
+        // {
+        //   "action_type": 0, // or 1 to approve
+        //   "to_address": "0x<to_address>",
+        //   "from_address": "0x<from_address>"
+        //   "request": "signed transaction string"
+        // }
+        // where "signed transaction string" has input structure:
+        // {
+        //   "friend_request_symmetric_key": "<public_key_encrypted symmetric key>",
+        //        Note: this field is optional if to approve a friend request, as this is already exchanged
+        //   "all_friends_symmetric_key": "<public_key_encrypted symmetric key>",
+        //        Note: this public key is always using the one for to_address' public key
+        // }
+
+        try  {
+            //Your code goes here
+            PublicKey publicKey = getPublicKey(toAccount);
+            CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
+            // String encryptedStr = cryptoManager.encryptTextBase64(publicKey, "abc".getBytes());
+            // System.out.print(encryptedStr);
+
+            JSONObject signedRequestNode = new JSONObject();
+            if (requestType == Tags.FriendRequest) {
+                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, ""); // need to encrypt by public key
+            }
+            signedRequestNode.put(Tags.ALL_FRIENDS_SYMMETRIC_KEY, ""); // need to encrypt by public key
+            // AccountManager accountManager = AccountManagerImpl.getInstance();
+            Account account = createAccount();
+            String addressStr = account.getAddress().getHex();
+            String transactionStr = signTransaction(account, signedRequestNode.toString().getBytes("UTF8"));
+
+            JSONObject requestNode = new JSONObject();
+            requestNode.put(Tags.ACTION_TYPE, requestType);
+            requestNode.put(Tags.TO_ADDRESS, "0x" + toAccount);
+            requestNode.put(Tags.FROM_ADDRESS, addressStr);
+            requestNode.put(Tags.REQUEST, transactionStr);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
