@@ -20,6 +20,7 @@ package org.awesomeapp.messenger.model;
 import org.awesomeapp.messenger.crypto.otr.OtrChatManager;
 import org.awesomeapp.messenger.plugin.xmpp.XmppAddress;
 import org.awesomeapp.messenger.provider.Imps;
+import org.json.JSONObject;
 import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
@@ -29,6 +30,11 @@ import net.java.otr4j.session.SessionStatus;
 
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
+
+import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.Tags;
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 
 /**
  * A ChatSession represents a conversation between two users. A ChatSession has
@@ -189,6 +195,24 @@ public class ChatSession {
                 }
                 else {
                     //do OTR!
+                    String body = message.getBody();
+                    // [CRYTO_TALK] add message encryption
+                    if (body != null) {
+                        com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                        String senderUserID = message.getTo().getUser(); // .split("@")[0];
+                        JSONObject keys = accountManager.getFriendKeys(senderUserID);
+                        String privateAsymmetricKey = "";
+                        if (keys != null) {
+                            try {
+                                privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
+                        body = cryptoManager.encryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                    }
 
                     if (otrStatus == SessionStatus.ENCRYPTED) {
 

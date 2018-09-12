@@ -40,8 +40,11 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.Tags;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
+import org.json.JSONObject;
 
 /*
  * OtrChatManager keeps track of the status of chats and their OTR stuff
@@ -320,7 +323,18 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
             // [CRYTO_TALK] add message decryption
             if (plain != null)
             {
-                plain = mCryptoManager.decryptDataWithSymmetricKey(mTestKey, plain);
+                com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                String remoteAddressID = remoteUserId.split("@")[0];
+                JSONObject keys = accountManager.getFriendKeys(remoteAddressID);
+                String privateAsymmetricKey = "";
+                if (keys != null) {
+                    try {
+                        privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                plain = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, plain);
             }
 
             OtrSm otrSm = mOtrSms.get(sessionId.toString());
@@ -349,11 +363,12 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
         String localUserId = message.getFrom().getAddress();
         String remoteUserId = message.getTo().getAddress();
         String body = message.getBody();
+        /*
         // [CRYTO_TALK] add message encryption
         if (body != null) {
             body = mCryptoManager.encryptDataWithSymmetricKey(mTestKey, body);
         }
-
+        */
 
         SessionID sessionId = getSessionId(localUserId, remoteUserId);
 
