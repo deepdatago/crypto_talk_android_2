@@ -61,9 +61,14 @@ public class CryptoManagerImpl implements CryptoManager {
 	private final int keySize; // 4096
 	private final int certExpireInDays; // 365
 	private final String signatureAlg; // signatureAlgorithm "SHA256withRSA"
-	private final String privateKeyDescription = "RSA PRIVATE KEY";
-	private final String publicKeyDescription = "RSA PUBLIC KEY";
+
+	// in order to work with iOS version of this chat App, the description cannot be changed to something else
+	// otherwise, iOS counter part will not be able to encrypt the data with the public key
+	// OTRKit/CryptoManager/CryptoManager.swift::encryptStrWithPublicKey
+	private final String privateKeyDescription = "PRIVATE KEY";
+	private final String publicKeyDescription = "PUBLIC KEY";
 	private final String certificateDescription = "CERTIFICATE";
+
 	private final String providerName = "BC"; // for bouncy castle
 	private final String commonName; // "CN=KeyManagerTest"
 	private static CryptoManagerImpl msCryptoManager = null;
