@@ -186,6 +186,7 @@ public class CryptoManagerImpl implements CryptoManager {
 					new X509EncodedKeySpec(keyBytes);
 
 			PublicKey publicKey = factory.generatePublic(privKeySpec);
+
 			return publicKey;
 
 		} catch (Exception e) {
@@ -217,6 +218,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		
 		return factory.generatePublic(privKeySpec);
 	}
+
     
 	public PublicKey loadPublicKeyFromRSA_X509_CertificatePEM(String fileName)
 			throws IOException, NoSuchProviderException, NoSuchAlgorithmException {
@@ -269,7 +271,9 @@ public class CryptoManagerImpl implements CryptoManager {
         // encrypt the plaintext using the public key
         cipher.init(Cipher.ENCRYPT_MODE, key);
         cipherText = cipher.doFinal(text);
-        return new String(Base64.encode(cipherText, Base64.DEFAULT));
+
+        // iOS cannot decrypt string with "\n"
+        return new String(Base64.encode(cipherText, Base64.DEFAULT)).replaceAll("\n", "");
     }    
     
     public String decryptTextBase64(PrivateKey key, byte[] text) throws Exception
