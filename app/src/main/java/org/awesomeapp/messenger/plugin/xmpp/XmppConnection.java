@@ -1906,8 +1906,20 @@ public class XmppConnection extends ImConnection {
                 setAvatar = !DatabaseUtils.doesAvatarHashExist(mContext.getContentResolver(),  Imps.Avatars.CONTENT_URI, mUser.getAddress().getBareAddress(), vCard.getAvatarHash());
             }
 
-            vCard.setNickName(mUser.getName());
-            vCard.setFirstName(mUser.getName());
+            // [CRYPTO_TALK] encrypt nickname before sending out
+            String nickName = mUser.getName();
+            final AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+
+            String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
+            CryptoManager cryptoManager = new CryptoManagerImpl();
+            String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, nickName);
+
+
+            // vCard.setNickName(mUser.getName());
+            // vCard.setFirstName(mUser.getName());
+            vCard.setNickName(encryptedNickname);
+            vCard.setFirstName(encryptedNickname);
+            // [CRYPTO_TALK] end
 
             //if we have moved to a new account, send it here
             if (migrateJabberId != null)

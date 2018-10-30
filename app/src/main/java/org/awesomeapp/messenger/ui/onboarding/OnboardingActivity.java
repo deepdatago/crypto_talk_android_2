@@ -801,18 +801,20 @@ public class OnboardingActivity extends BaseActivity {
     {
         final String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
         String creationNickname = ((TextView)findViewById(R.id.edtName)).getText().toString();
+        // [CRYPTO_TALK] register account
         final AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance(creationPassword);
 
         String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
         CryptoManager cryptoManager = new CryptoManagerImpl();
-        mNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, creationNickname);
+        mNickname = creationNickname;
+        String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, mNickname);
         final Account newAccount = accountManager.createAccount();
 
         // Create a new HttpClient and Post Header
         String url = Tags.BASE_URL + Tags.ACCOUNT_REGISTER_API;
         JSONObject requestNode = new JSONObject();
         try {
-            String registerRequest = accountManager.getRegisterRequest(newAccount, mNickname);
+            String registerRequest = accountManager.getRegisterRequest(newAccount, encryptedNickname);
 
             MediaType mediaTypeJSON = MediaType.parse("application/json; charset=utf-8");
 
@@ -981,7 +983,9 @@ public class OnboardingActivity extends BaseActivity {
                 KeyPair keyPair = keyMan.generateLocalKeyPair();
                 mFingerprint = keyMan.getFingerprint(keyPair.getPublic());
 
-                String nickname = new XmppAddress(account[0]).getUser();
+                // [CRYPTO_TALK]
+                // String nickname = new XmppAddress(account[0]).getUser();
+                String nickname = mNickname;
                 OnboardingAccount result = OnboardingManager.addExistingAccount(OnboardingActivity.this, mHandler, nickname, account[0], account[1]);
 
                 if (result != null && result.accountId != -1 && (!TextUtils.isEmpty(result.username))) {
