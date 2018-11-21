@@ -364,7 +364,7 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
         String remoteUserId = message.getTo().getAddress();
         String body = message.getBody();
         /*
-        // [CRYTO_TALK] add message encryption
+        // [CRYPTO_TALK] add message encryption
         if (body != null) {
             body = mCryptoManager.encryptDataWithSymmetricKey(mTestKey, body);
         }

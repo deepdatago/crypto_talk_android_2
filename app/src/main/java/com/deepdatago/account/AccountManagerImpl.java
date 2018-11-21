@@ -580,7 +580,10 @@ public class AccountManagerImpl implements AccountManager {
 
             JSONObject signedRequestNode = new JSONObject();
             if (requestType == Tags.FriendRequest) {
-                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, ""); // need to encrypt by public key
+                UUID idOne = UUID.randomUUID();
+                String privateFriendSymmetricKey = idOne.toString().replace("-", "");
+
+                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, privateFriendSymmetricKey); // need to encrypt by public key
             }
             String allFriendsSharedKey = getSharedAsymmetricKey();
             String encryptedAllFriendsKey = cryptoManager.encryptTextBase64(publicKey, allFriendsSharedKey.getBytes());

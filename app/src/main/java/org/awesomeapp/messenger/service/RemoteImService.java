@@ -733,7 +733,8 @@ public class RemoteImService extends Service implements OtrEngineListener, ImSer
             providerSettings.close();
 
             mConnections.put(providerId + "." + accountId, imConnectionAdapter);
-            mConnectionsByUser.put(imConnectionAdapter.getLoginUser().getAddress().getBareAddress(),imConnectionAdapter);
+            // [CRYPTO_TALK] use lower case address for comparison purpose
+            mConnectionsByUser.put(imConnectionAdapter.getLoginUser().getAddress().getBareAddress().toLowerCase(),imConnectionAdapter);
 
             Debug.recordTrail(this, CONNECTIONS_TRAIL_TAG, "" + mConnections.size());
 
@@ -882,7 +883,8 @@ public class RemoteImService extends Service implements OtrEngineListener, ImSer
 
 
     public ImConnectionAdapter getConnection(String userAddress) {
-       return mConnectionsByUser.get(userAddress);
+        // [CRYPTO_TALK] use lower case address for comparison purpose
+       return mConnectionsByUser.get(userAddress.toLowerCase());
     }
 
 

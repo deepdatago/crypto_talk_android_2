@@ -212,6 +212,7 @@ public class ChatSession {
 
                         CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
                         body = cryptoManager.encryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                        message.setBody(body);
                     }
 
                     if (otrStatus == SessionStatus.ENCRYPTED) {

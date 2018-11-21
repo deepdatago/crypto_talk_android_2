@@ -48,6 +48,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.Tags;
+
 import org.awesomeapp.messenger.ImApp;
 import org.awesomeapp.messenger.crypto.otr.OtrAndroidKeyManagerImpl;
 import org.awesomeapp.messenger.model.ImConnection;
@@ -114,8 +117,36 @@ public class AddContactActivity extends BaseActivity {
             @Override
             public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
                 if (actionId == EditorInfo.IME_ACTION_SEND) {
+                    Thread thread = new Thread(new Runnable() {
 
-                    inviteBuddies();
+                        @Override
+                        public void run() {
+                            // [CRYPTO_TALK] add friend request
+                            Pattern pattern = Pattern.compile(EMAIL_PATTERN);
+
+                            Rfc822Token[] recipients = Rfc822Tokenizer.tokenize(mNewAddress.getText());
+
+                            for (Rfc822Token recipient : recipients) {
+
+                                String address = recipient.getAddress();
+                                if (pattern.matcher(address).matches()) {
+                                    try {
+                                        String[] addressArray = address.split("\\@");
+                                        com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                                        accountManager.friendRequestSync(addressArray[0], Tags.FriendRequest);
+                                    }
+                                    catch (Exception e) {
+
+                                    }
+                                }
+                            }
+                            // [CRYPTO_TALK] end
+
+                            inviteBuddies();
+                        }
+                    });
+                    thread.start();
+
                 }
                 return false;
             }
