@@ -807,14 +807,14 @@ public class OnboardingActivity extends BaseActivity {
         String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
         CryptoManager cryptoManager = new CryptoManagerImpl();
         mNickname = creationNickname;
-        String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, mNickname);
+        // String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, mNickname);
         final Account newAccount = accountManager.createAccount();
 
         // Create a new HttpClient and Post Header
         String url = Tags.BASE_URL + Tags.ACCOUNT_REGISTER_API;
         JSONObject requestNode = new JSONObject();
         try {
-            String registerRequest = accountManager.getRegisterRequest(newAccount, encryptedNickname);
+            String registerRequest = accountManager.getRegisterRequest(newAccount, mNickname);
 
             MediaType mediaTypeJSON = MediaType.parse("application/json; charset=utf-8");
 

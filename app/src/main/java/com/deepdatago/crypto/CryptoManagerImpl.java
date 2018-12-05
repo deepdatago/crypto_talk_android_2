@@ -421,6 +421,10 @@ public class CryptoManagerImpl implements CryptoManager {
 			e.printStackTrace();
 		}
 
+		if (decryptedPlainText == null) {
+			return "";
+		}
+
 		String decryptedString = new String(decryptedPlainText);
 		return decryptedString;
 	}

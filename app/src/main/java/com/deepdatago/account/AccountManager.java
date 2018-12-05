@@ -40,6 +40,16 @@ public interface AccountManager {
     public JSONArray getSummary(String requestAccount, Context contextForHTTP);
 
     /**
+     * Generate get approved details, the shared symmetric key of fromAccount will be
+     * persisted
+     *
+     * @param   fromAccount: account that has summary info
+     * @param   contextForHTTP: context to send HTTP request
+     * @return      None
+     */
+    public void getApprovedDetails(String fromAccount, Context contextForHTTP);
+
+    /**
      * Send or approve friend request, synchronous call
      *
      * @param   toAccount: account that should receive the request
@@ -63,6 +73,20 @@ public interface AccountManager {
      * @return      Shared assymmetric key for all friends
      */
     public String getSharedAsymmetricKey();
+
+    /**
+     * get private chat symmetric key for a given friendId
+     *
+     * @return      Symmetric key for the given friendId
+     */
+    public String getSymmetricKey(String friendId);
+
+    /**
+     * get shared symmetric key for a given friendId
+     *
+     * @return      shared key for the given friendId
+     */
+    public String getSharedKey(String friendId);
 
     /**
      * Save account password

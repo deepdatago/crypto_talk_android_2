@@ -235,12 +235,15 @@ public class AccountManagerImpl implements AccountManager {
         JSONArray returnArray = new JSONArray();
         try {
             JSONArray friendReqArray = responseObject.getJSONArray("friend_request");
+            if (friendReqArray.length() == 0) {
+                return null;
+            }
             PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
 
             for (int i = 0; i < friendReqArray.length(); i++) {
                 JSONObject object = friendReqArray.getJSONObject(i);
                 String name = object.getString(Tags.NAME);
-                String fromAddress = object.getString(Tags.FROM_ADDRESS).replace("0x", "");
+                String fromAddress = object.getString(Tags.FROM_ADDRESS).replace("0x", "").toLowerCase();
                 String requestStr = object.getString(Tags.REQUEST);
                 requestStr = requestStr.replace("\\\"", "\"");
                 JSONObject keyObject = new JSONObject(requestStr);
@@ -284,6 +287,96 @@ public class AccountManagerImpl implements AccountManager {
 
 
         return returnArray;
+    }
+
+    public void getApprovedDetails(String toAddress, android.content.Context contextForHTTP) {
+
+        long unixTime = System.currentTimeMillis() / 1000L;
+        String timeString = Long.toString(unixTime);
+
+        String transactionStr = b64EncryptedSignedBytes(timeString.getBytes());
+        if (transactionStr == null || transactionStr.length() == 0) {
+            return;
+        }
+
+        Account account = createAccount();
+        String fromAddress = account.getAddress().getHex();
+
+
+        String lURL = Tags.BASE_URL + Tags.APPROVED_DETAILS_API;
+
+        lURL += Tags.FROM_ADDRESS + "=" + fromAddress.toLowerCase() + "&";
+        lURL += Tags.TO_ADDRESS + "=0x" + toAddress.toLowerCase() + "&"; // toAddess has 0x already
+        lURL += Tags.TIME_STAMP + "=" + timeString + "&";
+        lURL += Tags.ENCODED_SIGNATURE + "=" + transactionStr;
+
+        JSONObject responseObject = sendGetRequestSync(lURL);
+        if (responseObject == null) {
+            return;
+        }
+        JSONArray returnArray = new JSONArray();
+        try {
+            String approvedRequestStr = responseObject.getString("approved_request");
+            JSONObject approvedRequestObject = new JSONObject(approvedRequestStr);
+            String key = approvedRequestObject.getString("all_friends_symmetric_key");
+
+
+            // String key = friendReqObject.getString("all_friends_symmetric_key");
+
+            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+            String allFriendsAESKey = this.mCryptoManager.decryptTextBase64(privateKey, key.getBytes());
+            ContentValues accountValue = new ContentValues(2);
+            accountValue.put(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, allFriendsAESKey);
+            accountValue.put(Tags.DB_FIELD_ACCOUNT, toAddress);
+            final String[] projection = { Tags.DB_FIELD_ACCOUNT };
+            String selection = Tags.DB_FIELD_ACCOUNT + "='" + toAddress + "'";
+            Cursor c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
+            int cursorCount = c.getCount();
+            if (cursorCount > 0) {
+                sContentResolver.update(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue, selection, null);
+            }
+
+
+            /*
+            for (int i = 0; i < friendReqArray.length(); i++) {
+                JSONObject object = friendReqArray.getJSONObject(i);
+                String requestStr = object.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
+                // requestStr = requestStr.replace("\\\"", "\"");
+                JSONObject keyObject = new JSONObject(requestStr);
+
+                String allFriendsAESKey = keyObject.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
+                */
+                /*
+                allFriendsAESKey = this.mCryptoManager.decryptTextBase64(privateKey, allFriendsAESKey.getBytes());
+
+                ContentValues accountValue = new ContentValues(2);
+                accountValue.put(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, allFriendsAESKey);
+                accountValue.put(Tags.DB_FIELD_ACCOUNT, fromAccount);
+
+                final String[] projection = { Tags.DB_FIELD_ACCOUNT };
+                String selection = Tags.DB_FIELD_ACCOUNT + "='" + fromAccount + "'";
+                Cursor c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
+                int cursorCount = c.getCount();
+                if (cursorCount > 0) {
+                    sContentResolver.update(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue, selection, null);
+                }
+                */
+                /*
+                else {
+                    sContentResolver.insert(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue);
+                }
+                */
+
+            // }
+
+
+        } catch (JSONException e)
+        {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     private JSONObject sendGetRequestSync(String iURL) {
@@ -458,6 +551,65 @@ public class AccountManagerImpl implements AccountManager {
 
     }
 
+    public String getSharedKey(String friendId)
+    {
+        JSONObject keysObj = getFriendKeys(friendId);
+        try {
+            if (keysObj != null) {
+                String friendSharedKey = keysObj.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
+                return friendSharedKey;
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return null;
+    }
+
+    public String getSymmetricKey(String accountId)
+    {
+        String symmetricKey = null;
+
+        JSONObject keysObj = getFriendKeys(accountId);
+        try {
+            if (keysObj != null) {
+                String friendSymmetricKey = keysObj.getString(Tags.FRIEND_SYMMETRIC_KEY);
+                return friendSymmetricKey;
+            }
+            if (sContentResolver == null) {
+                return null;
+            }
+            UUID idOne = UUID.randomUUID();
+            symmetricKey = idOne.toString().replace("-", "");
+
+            ContentValues accountValue = new ContentValues(3);
+            accountValue.put(Tags.DB_FIELD_PRIVATE_SYMMETRIC_KEY, symmetricKey);
+            accountValue.put(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, ""); // shared symmetric key will be available after approve the friend request
+            accountValue.put(Tags.DB_FIELD_ACCOUNT, accountId);
+
+            final String[] projection = { Tags.DB_FIELD_ACCOUNT };
+            String selection = Tags.DB_FIELD_ACCOUNT + "='" + accountId + "'";
+            Cursor c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
+            int cursorCount = c.getCount();
+            if (cursorCount > 0) {
+                sContentResolver.update(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue, selection, null);
+            }
+            else {
+                sContentResolver.insert(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue);
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+
+
+        return symmetricKey;
+    }
+
     private String getAccountPassword() {
         if (sContentResolver == null) {
             return null;
@@ -503,7 +655,7 @@ public class AccountManagerImpl implements AccountManager {
         }
 
         final String[] projection = { Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, Tags.DB_FIELD_PRIVATE_SYMMETRIC_KEY};
-        final String selection = "lower(" + Tags.DB_FIELD_ACCOUNT + ")='" + account.toLowerCase() + "'";
+        final String selection = Tags.DB_FIELD_ACCOUNT + "='" + account.toLowerCase() + "'";
         Cursor keysCursor = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, null, selection, null, null);
 
         if (keysCursor.getCount() == 1) {
@@ -580,10 +732,11 @@ public class AccountManagerImpl implements AccountManager {
 
             JSONObject signedRequestNode = new JSONObject();
             if (requestType == Tags.FriendRequest) {
-                UUID idOne = UUID.randomUUID();
-                String privateFriendSymmetricKey = idOne.toString().replace("-", "");
-
-                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, privateFriendSymmetricKey); // need to encrypt by public key
+                String privateFriendSymmetricKey = getSymmetricKey(toAccount);
+                if (privateFriendSymmetricKey == null) {
+                    return;
+                }
+                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, cryptoManager.encryptTextBase64(publicKey, privateFriendSymmetricKey.getBytes()));
             }
             String allFriendsSharedKey = getSharedAsymmetricKey();
             String encryptedAllFriendsKey = cryptoManager.encryptTextBase64(publicKey, allFriendsSharedKey.getBytes());
@@ -595,8 +748,15 @@ public class AccountManagerImpl implements AccountManager {
 
             JSONObject requestNode = new JSONObject();
             requestNode.put(Tags.ACTION_TYPE, requestType);
-            requestNode.put(Tags.FROM_ADDRESS, "0x" + toAccount);
-            requestNode.put(Tags.TO_ADDRESS, addressStr);
+            if (requestType == Tags.FriendRequest) {
+                requestNode.put(Tags.FROM_ADDRESS, addressStr);
+                requestNode.put(Tags.TO_ADDRESS, "0x" + toAccount);
+            }
+            else {
+                // when approving friend request, the fromAddress should be the sender, and toAddress is this client
+                requestNode.put(Tags.TO_ADDRESS, addressStr);
+                requestNode.put(Tags.FROM_ADDRESS, "0x" + toAccount);
+            }
             requestNode.put(Tags.REQUEST, transactionStr);
 
             String lURL = Tags.BASE_URL + Tags.FRIEND_REQUEST_API;

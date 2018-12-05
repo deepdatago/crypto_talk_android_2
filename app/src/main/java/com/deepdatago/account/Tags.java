@@ -13,6 +13,7 @@ public class Tags {
     static public String FRIEND_REQUEST_API = "request/friend/";
     static public String GET_PUBLIC_KEY_API = "accounts/get_public_key/";
     static public String ACCOUNT_REGISTER_API = "accounts/register/";
+    static public String APPROVED_DETAILS_API = "request/approved_details/?";
 
     /* Database fields */
     static public String DATABASE_NAME = "Crypto";

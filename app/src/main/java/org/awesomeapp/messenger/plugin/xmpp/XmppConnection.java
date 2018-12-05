@@ -509,7 +509,11 @@ public class XmppConnection extends ImConnection {
                         String keyForAllFriends = keysObj.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
                         CryptoManager cryptoManager = com.deepdatago.crypto.CryptoManagerImpl.getInstance();
                         String decryptedNickName = cryptoManager.decryptDataWithSymmetricKey(keyForAllFriends, vCardNickName);
-                        if (!decryptedNickName.equals(contact.getName()))
+                        if (decryptedNickName.length() == 0 && vCardNickName.length() > 0) {
+                            contact.setName(vCardNickName);
+                            mContactListManager.doSetContactName(contact.getAddress().getBareAddress(), contact.getName());
+                        }
+                        else if (!decryptedNickName.equals(contact.getName()))
                         {
                             contact.setName(decryptedNickName);
                             mContactListManager.doSetContactName(contact.getAddress().getBareAddress(), contact.getName());
@@ -3488,22 +3492,30 @@ public class XmppConnection extends ImConnection {
             // AccountManager accountManager = new AccountManagerImpl(null);
             mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
             final Account account = mDeepDatagoAccountManager.createAccount();
-            JSONArray responseArray = mDeepDatagoAccountManager.getSummary(account.getAddress().getHex(), mContext);
-            try {
-                for (int i = 0; i < responseArray.length(); i++) {
-                    // set contact name to the matching responseObject
-                    JSONObject object = responseArray.getJSONObject(i);
-                    if (object.getString(Tags.FROM_ADDRESS).equalsIgnoreCase(contact.getName())) {
-                        String nickName = object.getString(Tags.NAME);
-                        if (nickName != null && nickName.length() > 0) {
-                            contact.setName(nickName);
-                        }
-                    }
 
+            String contactSharedKey = mDeepDatagoAccountManager.getSharedKey(contact.getName());
+            if (contactSharedKey != null && contactSharedKey.length() == 0) {
+                mDeepDatagoAccountManager.getApprovedDetails(contact.getName(), mContext);
+            }
+
+            JSONArray responseArray = mDeepDatagoAccountManager.getSummary(account.getAddress().getHex(), mContext);
+            if (responseArray != null) {
+                try {
+                    for (int i = 0; i < responseArray.length(); i++) {
+                        // set contact name to the matching responseObject
+                        JSONObject object = responseArray.getJSONObject(i);
+                        if (object.getString(Tags.FROM_ADDRESS).equalsIgnoreCase(contact.getName())) {
+                            String nickName = object.getString(Tags.NAME);
+                            if (nickName != null && nickName.length() > 0) {
+                                contact.setName(nickName);
+                            }
+                        }
+
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return;
             }
 
             ChatSession session = findOrCreateSession(contact.getAddress().toString(), false);
