@@ -62,7 +62,6 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
     private Context mContext;
     private ImApp mApp;
     private CryptoManager mCryptoManager;
-    private String mTestKey = "63A78349DF7544768E0ECBCF3ACB6527";
 
     private final static String TAG = "OtrChatManager";
 

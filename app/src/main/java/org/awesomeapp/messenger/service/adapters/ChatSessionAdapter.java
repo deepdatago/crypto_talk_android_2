@@ -90,6 +90,7 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
 
+import com.deepdatago.account.AccountManagerImpl;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
 
@@ -145,7 +146,6 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
     private boolean mIsMuted = false;
     private String mNickname = null;
     private CryptoManager mCryptoManager = new CryptoManagerImpl();
-    private final String mTestKey = "63A78349DF7544768E0ECBCF3ACB6527";
 
     public ChatSessionAdapter(ChatSession chatSession, ImConnectionAdapter connection, boolean isNewSession) {
 
@@ -616,7 +616,12 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                     // [CRYPTO_TALK]
                     // encrypt inputstream "fis"
                     // Log.e(TAG,"sendFileName: " + sendFileName + " and mediaPath: " + mediaPath);
-                    InputStream cipherStream = mCryptoManager.encryptInputStreamWithSymmetricKey(mTestKey, fis);
+                    String address = mChatSession.getParticipant().getAddress().getUser();
+                    com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                    String symmetricKey = accountManager.getSymmetricKey(address);
+
+                    InputStream cipherStream = mCryptoManager.encryptInputStreamWithSymmetricKey(symmetricKey, fis);
+                    // [CRYPTO_TALK] end
                     int cipherStreamLength = 0;
                     try {
                         cipherStreamLength = cipherStream.available();
@@ -2016,8 +2021,13 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         String result = null;
 
         try {
-            Downloader dl = new Downloader(mCryptoManager, mTestKey);
+            // [CRYPTO_TALK] get symmetricKey based on recipient address
+            String address = mChatSession.getParticipant().getAddress().getUser();
+            com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+            String symmetricKey = accountManager.getSymmetricKey(address);
+            Downloader dl = new Downloader(mCryptoManager, symmetricKey);
             File fileDownload = dl.openSecureStorageFile(mContactId + "", mediaLink);
+            // [CRYPTO_TALK] end
             OutputStream storageStream = new info.guardianproject.iocipher.FileOutputStream(fileDownload);
             boolean downloaded = dl.get(mediaLink, storageStream);
 
