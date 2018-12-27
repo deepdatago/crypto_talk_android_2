@@ -3493,9 +3493,9 @@ public class XmppConnection extends ImConnection {
             mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
             final Account account = mDeepDatagoAccountManager.createAccount();
 
-            String contactSharedKey = mDeepDatagoAccountManager.getSharedKey(contact.getName());
+            String contactSharedKey = mDeepDatagoAccountManager.getSharedKey(contact.getAddress().getUser());
             if (contactSharedKey != null && contactSharedKey.length() == 0) {
-                mDeepDatagoAccountManager.getApprovedDetails(contact.getName(), mContext);
+                mDeepDatagoAccountManager.getApprovedDetails(contact.getAddress().getUser(), mContext);
             }
 
             JSONArray responseArray = mDeepDatagoAccountManager.getSummary(account.getAddress().getHex(), mContext);

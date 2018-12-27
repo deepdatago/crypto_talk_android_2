@@ -388,6 +388,9 @@ public class CryptoManagerImpl implements CryptoManager {
 		byte[] decryptedPlainText = null;
 		int ptLength = 0;
 		Cipher cipher = null;
+		if (inKey.length() == 0 || data.length() == 0) {
+			return "";
+		}
 		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
 		try {
 			// int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
