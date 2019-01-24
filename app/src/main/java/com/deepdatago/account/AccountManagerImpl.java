@@ -691,6 +691,9 @@ public class AccountManagerImpl implements AccountManager {
                 if (publicKey != null) {
                     // remove 2
                     // first end of line
+                    if (publicKey.charAt(publicKey.length()-1) == '\n') {
+                        publicKey = publicKey.substring(0, publicKey.length() - 1);
+                    }
                     int firstEOL = publicKey.indexOf('\n');
                     int secondEOL = publicKey.lastIndexOf('\n');
                     String publicKey2 = publicKey.substring(firstEOL+1, secondEOL);
