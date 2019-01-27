@@ -849,7 +849,7 @@ public class OnboardingActivity extends BaseActivity {
                     String password = null;
                     try {
                         JSONObject jsonObj = new JSONObject(s);
-                        username = jsonObj.getString("xmppAccountNumber").toLowerCase() + "@dev.deepdatago.com";
+                        username = jsonObj.getString("xmppAccountNumber").toLowerCase() + "@" + Tags.BASE_SERVER_ADDRESS;
                         password = jsonObj.getString("xmppAccountPassword");
 
                     } catch (Exception e) {

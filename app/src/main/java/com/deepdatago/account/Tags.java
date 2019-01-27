@@ -8,7 +8,9 @@ import android.net.Uri;
 
 public class Tags {
     /* API related */
-    static public String BASE_URL = "https://dev.deepdatago.com/service/";
+    static public String BASE_SERVER_ADDRESS = "dev.deepdatago.com";
+    static public String BASE_URL = "https://" + BASE_SERVER_ADDRESS + "/service/";
+    static public String BASE_CONFERENCE_ADDRESS = "conference." + BASE_SERVER_ADDRESS;
     static public String REQUEST_SUMMARY_API = "request/summary/?";
     static public String FRIEND_REQUEST_API = "request/friend/";
     static public String GET_PUBLIC_KEY_API = "accounts/get_public_key/";

@@ -65,6 +65,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.Tags;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
@@ -576,7 +577,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
 
         String chatRoom = "groupchat" + UUID.randomUUID().toString().substring(0,8);
-        String chatServer = ""; //use the default
+        String chatServer = Tags.BASE_CONFERENCE_ADDRESS; //use the default
         String nickname = mApp.getDefaultUsername().split("@")[0];
         try
         {
