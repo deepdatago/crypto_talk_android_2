@@ -13,6 +13,7 @@ public class Tags {
     static public String BASE_CONFERENCE_ADDRESS = "conference." + BASE_SERVER_ADDRESS;
     static public String REQUEST_SUMMARY_API = "request/summary/?";
     static public String FRIEND_REQUEST_API = "request/friend/";
+    static public String REQUEST_GROUP_INVITE_API = "request/group_invite/";
     static public String GET_PUBLIC_KEY_API = "accounts/get_public_key/";
     static public String ACCOUNT_REGISTER_API = "accounts/register/";
     static public String APPROVED_DETAILS_API = "request/approved_details/?";
@@ -21,6 +22,7 @@ public class Tags {
     static public String DATABASE_NAME = "Crypto";
     static public String ACCOUNT_TABLE_NAME = "account";
     static public String FRIENDS_KEYS_TABLE_NAME = "friends_keys";
+    static public String GROUPS_KEYS_TABLE_NAME = "groups_keys";
 
     static public String DB_FIELD_PRIMARY_ID = "_ID";
     static public String DB_FIELD_SHARED_SYMMETRIC_KEY = "shared_symmetric_key";
@@ -29,6 +31,8 @@ public class Tags {
     static public String DB_FIELD_XMPP_USER_NAME = "xmpp_user_name";
     static public String DB_FIELD_XMPP_PASSOWRD = "xmpp_password";
     static public String DB_FIELD_PASSOWRD = "password";
+    static public String DB_FIELD_GROUP_ADDRESS = "group_address"; // for GROUPS_KEYS_TABLE_NAME
+    static public String DB_FIELD_GROUP_SYMMETRIC_KEY = "group_symmetric_key"; // for GROUPS_KEYS_TABLE_NAME
 
 
     /* Content Provider */
@@ -38,6 +42,7 @@ public class Tags {
     static public final String PROVIDER_NAME = "com.deepdatago.provider." + Tags.DATABASE_NAME;
     static public final Uri CRYPTO_ACCOUNT_URI = Uri.parse("content://" + Tags.PROVIDER_NAME + "/" + Tags.ACCOUNT_TABLE_NAME);
     static public final Uri CRYPTO_FRIENDS_KEYS_URI = Uri.parse("content://" + Tags.PROVIDER_NAME + "/" + Tags.FRIENDS_KEYS_TABLE_NAME);
+    static public final Uri CRYPTO_GROUPS_KEYS_URI = Uri.parse("content://" + Tags.PROVIDER_NAME + "/" + Tags.GROUPS_KEYS_TABLE_NAME);
 
     /* JSON requests*/
     static public String TO_ADDRESS = "to_address";
@@ -47,6 +52,8 @@ public class Tags {
     static public String FROM_ADDRESS = "from_address";
     static public String SENDER_ADDRESS = "sender_address";
     static public String REQUEST = "request";
+    static public String GROUP_ADDRESS = "group_address";
+    static public String GROUP_INVITEE_LIST = "group_invitee_list";
     static public String FRIEND_SYMMETRIC_KEY = "friend_request_symmetric_key";
     static public String ALL_FRIENDS_SYMMETRIC_KEY = "all_friends_symmetric_key";
     static public String TRANSACTION = "transaction";

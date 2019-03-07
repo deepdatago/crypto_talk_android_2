@@ -28,6 +28,7 @@ public class CryptoProvider extends ContentProvider {
 
     static final int ACCOUNT = 1;
     static final int FRIEND = 2;
+    static final int GROUPS = 3;
 
     /**
      * Database specific constant declarations
@@ -41,6 +42,7 @@ public class CryptoProvider extends ContentProvider {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(Tags.PROVIDER_NAME, "/" + Tags.ACCOUNT_TABLE_NAME, ACCOUNT);
         uriMatcher.addURI(Tags.PROVIDER_NAME, "/" + Tags.FRIENDS_KEYS_TABLE_NAME, FRIEND);
+        uriMatcher.addURI(Tags.PROVIDER_NAME, "/" + Tags.GROUPS_KEYS_TABLE_NAME, GROUPS);
     }
 
     static final String CREATE_FRIENDS_KEYS_TABLE =
@@ -58,6 +60,12 @@ public class CryptoProvider extends ContentProvider {
                     Tags.DB_FIELD_PASSOWRD + " TEXT, " +
                     Tags.DB_FIELD_XMPP_PASSOWRD + " TEXT);";
 
+    static final String CREATE_GROUPSS_KEYS_TABLE =
+            " CREATE TABLE " + Tags.GROUPS_KEYS_TABLE_NAME +
+                    " (" + Tags.DB_FIELD_PRIMARY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    Tags.DB_FIELD_GROUP_ADDRESS + " TEXT UNIQUE NOT NULL, " +
+                    Tags.DB_FIELD_GROUP_SYMMETRIC_KEY + " TEXT NOT NULL);";
+
     private static final String[] ACCOUNT_PROJECTION = {Tags.DB_FIELD_PRIMARY_ID, Tags.DB_FIELD_SHARED_SYMMETRIC_KEY};
     /**
      * Helper class that actually creates and manages
@@ -73,6 +81,7 @@ public class CryptoProvider extends ContentProvider {
         public void onCreate(SQLiteDatabase db) {
             db.execSQL(CREATE_DB_TABLE);
             db.execSQL(CREATE_FRIENDS_KEYS_TABLE);
+            db.execSQL(CREATE_GROUPSS_KEYS_TABLE);
         }
 
         @Override
@@ -109,6 +118,8 @@ public class CryptoProvider extends ContentProvider {
                 return insertAccountTable(uri, values);
             case FRIEND:
                 return insertFriendTable(uri, values);
+            case GROUPS:
+                return insertGroupsTable(uri, values);
             default:
         }
         throw new SQLException("Failed to add a record into " + uri);
@@ -190,6 +201,46 @@ public class CryptoProvider extends ContentProvider {
         throw new SQLException("Failed to add a record into " + uri);
     }
 
+    private Uri insertGroupsTable(Uri uri, ContentValues values) {
+        // account table should only have 1 record
+        final String[] projection = { Tags.DB_FIELD_GROUP_ADDRESS };
+
+        String group = values.get(Tags.DB_FIELD_GROUP_ADDRESS).toString();
+
+        String selection = Tags.DB_FIELD_GROUP_ADDRESS + "='" + group+"'";
+
+        Cursor c = query(uri,	projection,	selection,null, null);
+        int cursorCount = c.getCount();
+
+        final String URL = "content://" + Tags.PROVIDER_NAME + "/" + Tags.GROUPS_KEYS_TABLE_NAME;
+        final Uri CONTENT_URI = Uri.parse(URL);
+
+        if (cursorCount > 0)
+        {
+            // update only
+            int updateCount = update(uri, values, selection, null);
+            int index = c.getColumnIndex(Tags.DB_FIELD_PRIMARY_ID);
+            c.moveToFirst();
+            long rowID = c.getLong(index);
+            Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
+            getContext().getContentResolver().notifyChange(_uri, null);
+            return _uri;
+        }
+
+        long rowID = db.insert(	Tags.GROUPS_KEYS_TABLE_NAME, "", values);
+
+        /**
+         * If record is added successfully
+         */
+        if (rowID > 0) {
+            Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
+            getContext().getContentResolver().notifyChange(_uri, null);
+            return _uri;
+        }
+
+        throw new SQLException("Failed to add a record into " + uri);
+    }
+
     @Override
     public Cursor query(Uri uri, String[] projection,
                         String selection,String[] selectionArgs, String sortOrder) {
@@ -201,6 +252,9 @@ public class CryptoProvider extends ContentProvider {
                 break;
             case FRIEND:
                 qb.setTables(Tags.FRIENDS_KEYS_TABLE_NAME);
+                break;
+            case GROUPS:
+                qb.setTables(Tags.GROUPS_KEYS_TABLE_NAME);
                 break;
             default:
                 return null;
@@ -259,6 +313,9 @@ public class CryptoProvider extends ContentProvider {
             case FRIEND:
                 count = db.delete(Tags.FRIENDS_KEYS_TABLE_NAME, selection, selectionArgs);
                 break;
+            case GROUPS:
+                count = db.delete(Tags.GROUPS_KEYS_TABLE_NAME, selection, selectionArgs);
+                break;
             default:
                 return 0;
         }
@@ -294,6 +351,9 @@ public class CryptoProvider extends ContentProvider {
             case FRIEND:
                 count = db.update(Tags.FRIENDS_KEYS_TABLE_NAME, values, selection, selectionArgs);
                 break;
+            case GROUPS:
+                count = db.update(Tags.GROUPS_KEYS_TABLE_NAME, values, selection, selectionArgs);
+                break;
             default:
                 return 0;
         }
@@ -307,6 +367,10 @@ public class CryptoProvider extends ContentProvider {
         switch (uriMatcher.match(uri)){
             case ACCOUNT:
                 return "vnd.android.cursor.dir/vnd.example.account";
+            case FRIEND:
+                return "vnd.android.cursor.dir/vnd.example.friend";
+            case GROUPS:
+                return "vnd.android.cursor.dir/vnd.example.groups";
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
         }

@@ -70,6 +70,7 @@ import org.awesomeapp.messenger.service.RemoteImService;
 import org.awesomeapp.messenger.service.StatusBarNotifier;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.httpfileupload.UploadProgressListener;
+import org.json.JSONObject;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
@@ -91,6 +92,7 @@ import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
 
 import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.Tags;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
 
@@ -1168,6 +1170,28 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
             String bareUsername = msg.getFrom().getBareAddress();
             String nickname = getNickName(username);
             Contact contact = null;
+            // [CRYTO_TALK] add message decryption
+            if (body != null)
+            {
+                com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                String remoteAddressID = bareUsername.split("@")[0];
+                JSONObject keys = accountManager.getFriendKeys(remoteAddressID);
+                String privateAsymmetricKey = "";
+                String oldBody = body;
+                if (keys != null) {
+                    try {
+                        privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
+                        body = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    if (body.length() == 0) {
+                        body = oldBody; // key is invalid, or not accepted by others yet
+                    }
+                }
+            }
+            // [CRYTO_TALK] END add message decryption
+
 
             try {
                 contact = mConnection.getContactListManager().getContactByAddress(bareUsername);

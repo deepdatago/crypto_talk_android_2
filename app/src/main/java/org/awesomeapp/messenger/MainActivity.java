@@ -53,6 +53,8 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
+import android.text.util.Rfc822Token;
+import android.text.util.Rfc822Tokenizer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -64,8 +66,11 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.deepdatago.account.AccountManager;
 import com.deepdatago.account.AccountManagerImpl;
 import com.deepdatago.account.Tags;
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
@@ -112,6 +117,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import im.zom.messenger.R;
 import info.guardianproject.iocipher.VirtualFileSystem;
@@ -574,9 +580,9 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
 
     private void startGroupChat (ArrayList<String> invitees)
     {
-
-
-        String chatRoom = "groupchat" + UUID.randomUUID().toString().substring(0,8);
+        // [CRYPTO_TALK] unify group naming convention with iOS counter part
+        String chatRoom = "android-group-" + UUID.randomUUID().toString();
+        // [CRYPTO_TALK] END unify group naming convention with iOS counter part
         String chatServer = Tags.BASE_CONFERENCE_ADDRESS; //use the default
         String nickname = mApp.getDefaultUsername().split("@")[0];
         try
@@ -590,6 +596,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         } catch (RemoteException re) {
 
         }
+
     }
 
     @Override
@@ -999,9 +1006,16 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
             protected String doInBackground(String... params) {
 
                 String subject = params[0];
-                String chatRoom = "group" + UUID.randomUUID().toString().substring(0,8);
+                // [CRYPTO_TALK] use chatRoom address created before
+                // String chatRoom = "group" + UUID.randomUUID().toString().substring(0,8);
+                String chatRoom = params[0];
+                // [CRYPTO_TALK] END use chatRoom address created before
                 String server = params[1];
 
+                // [CRYPTO_TALK] register group info
+                AccountManager accountManager = AccountManagerImpl.getInstance();
+                accountManager.createGroupChat(chatRoom, invitees);
+                // [CRYPTO_TALK] END register group info
 
                 try {
 

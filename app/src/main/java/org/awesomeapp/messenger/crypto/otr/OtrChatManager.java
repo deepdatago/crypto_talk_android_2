@@ -319,22 +319,6 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
             mOtrEngineHost.putSessionResource(sessionId, processResource(remoteUserId));
 
             plain = mOtrEngine.transformReceiving(sessionId, msg, tlvs);
-            // [CRYTO_TALK] add message decryption
-            if (plain != null)
-            {
-                com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
-                String remoteAddressID = remoteUserId.split("@")[0];
-                JSONObject keys = accountManager.getFriendKeys(remoteAddressID);
-                String privateAsymmetricKey = "";
-                if (keys != null) {
-                    try {
-                        privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                plain = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, plain);
-            }
 
             OtrSm otrSm = mOtrSms.get(sessionId.toString());
 

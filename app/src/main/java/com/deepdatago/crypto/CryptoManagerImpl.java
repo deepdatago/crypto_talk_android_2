@@ -23,6 +23,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
+import java.security.Signature;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -511,4 +512,21 @@ public class CryptoManagerImpl implements CryptoManager {
 		}
 		return null;
 	}
+
+	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString) {
+		try {
+			byte[] data = inString.getBytes();
+			Signature sig = Signature.getInstance(this.signatureAlg);
+			sig.initSign(inPrivateKey);
+			sig.update(data);
+			byte[] signatureBytes = sig.sign();
+			String signatureStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
+			return signatureStr;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 }

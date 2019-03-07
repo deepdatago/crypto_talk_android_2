@@ -2802,6 +2802,13 @@ public class XmppConnection extends ImConnection {
                 if (session.getParticipant() instanceof ChatGroup) {
                     muc = ((XmppChatGroupManager)getChatGroupManager()).getMultiUserChat(message.getTo().getAddress());
                     msgXmpp = muc.createMessage();
+                    // [CRYPTO_TALK] encrypt message body
+                    String groupAddress = message.getTo().getAddress();
+                    CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
+                    AccountManager accountManager = AccountManagerImpl.getInstance();
+                    String groupKey = accountManager.getGroupKey(groupAddress);
+                    message.setBody(cryptoManager.encryptDataWithSymmetricKey(groupKey, message.getBody()));
+                    // [CRYPTO_TALK] END encrypt message body
                 } else {
                     msgXmpp = new org.jivesoftware.smack.packet.Message(
                             jidTo, org.jivesoftware.smack.packet.Message.Type.chat);

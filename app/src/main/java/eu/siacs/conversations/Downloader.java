@@ -74,6 +74,7 @@ public class Downloader {
                     // [CRYPTO_TALK] setup temp file
                     // mTmpLocalFile
                     // OutputStream tmpOS = new FileOutputStream(mTmpLocalFile);
+
                     info.guardianproject.iocipher.File tmpFileNew = new info.guardianproject.iocipher.File(mTmpLocalFile);
                     tmpFileNew.getParentFile().mkdirs();
 
@@ -89,7 +90,11 @@ public class Downloader {
 
                     InputStream encryptedInputStream = new info.guardianproject.iocipher.FileInputStream(tmpFileNew);
                     InputStream decryptedInputStream = mCryptoManager.decryptInputStreamWithSymmetricKey(mTestKey, encryptedInputStream);
-                    //
+
+                    if (decryptedInputStream == null ) {
+                        decryptedInputStream = new info.guardianproject.iocipher.FileInputStream(tmpFileNew);
+                    }
+
                     OutputStream os = setupOutputStream(storageStream, url.getRef());
                     while ((count = decryptedInputStream.read(buffer)) != -1) {
                         os.write(buffer, 0, count);

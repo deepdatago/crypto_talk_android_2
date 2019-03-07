@@ -30,6 +30,8 @@ import java.net.URLEncoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -772,6 +774,100 @@ public class AccountManagerImpl implements AccountManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public boolean createGroupChat(String groupAddress, ArrayList<String> invitees) {
+        Account account = createAccount();
+        String transactionStr = null;
+        try {
+            // System.out.println("from_address: " + account.getAddress().getHex());
+
+            // replace data by public key
+            long unixTime = System.currentTimeMillis() / 1000L;
+            String timeString = Long.toString(unixTime);
+
+            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+
+            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString);
+
+            // System.out.println("public key: " + data);
+            transactionStr = signTransaction(account, signedTimeString.getBytes("UTF8"));
+            // System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
+            JSONObject requestNode = new JSONObject();
+            requestNode.put(Tags.FROM_ADDRESS, account.getAddress().getHex());
+            requestNode.put(Tags.GROUP_ADDRESS, groupAddress);
+            requestNode.put(Tags.TIME_STAMP, timeString);
+            // System.out.println("time stamp: " + timeString + " signed time stamp: " + signStringByPrivateKey(privateKey, timeString));
+            requestNode.put(Tags.REQUEST, transactionStr);
+
+            // add inviteeList into JSONArray
+            JSONObject inviteeDict = new JSONObject();
+            String groupKey = getGroupKey(groupAddress);
+
+            for (int i = 0; i < invitees.size(); ++i) {
+                String inviteeAddress = invitees.get(i);
+                inviteeAddress = getBlockChainIDFromAddress(inviteeAddress);
+                String friendSharedSymmetricKey = getSharedKey(inviteeAddress);
+                String encryptedGroupKey = mCryptoManager.encryptDataWithSymmetricKey(friendSharedSymmetricKey, groupKey);
+                inviteeDict.put(inviteeAddress, encryptedGroupKey);
+            }
+
+            requestNode.put(Tags.GROUP_INVITEE_LIST, inviteeDict.toString());
+
+            String lURL = Tags.BASE_URL + Tags.REQUEST_GROUP_INVITE_API;
+
+            JSONObject response = sendPostRequestSync(lURL, requestNode);
+            if (response == null) {
+                // error occurred
+            }
+
+        } catch (Exception e) {
+            // transactionStr = e.getMessage();
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
+
+    public String getGroupKey(String groupAddress)
+    {
+        if (sContentResolver == null) {
+            return null;
+        }
+        String address = getBlockChainIDFromAddress(groupAddress);
+        // ContentResolver lResolver = new ContentResolver
+        final String[] projection = { Tags.DB_FIELD_GROUP_SYMMETRIC_KEY};
+        String selection = Tags.DB_FIELD_GROUP_ADDRESS + "='" + address + "'";
+        Cursor acct = sContentResolver.query(Tags.CRYPTO_GROUPS_KEYS_URI, projection, selection, null, null);
+
+        String symmetricKey = null;
+        if (acct.getCount() == 0)
+        {
+            ContentValues groupValue = new ContentValues(1); // only generate one record
+            UUID idOne = UUID.randomUUID();
+            symmetricKey = idOne.toString().replace("-", "");
+
+            groupValue.put(Tags.DB_FIELD_GROUP_SYMMETRIC_KEY, symmetricKey);
+            groupValue.put(Tags.DB_FIELD_GROUP_ADDRESS, address);
+
+            Uri uri = null;
+            uri = sContentResolver.insert(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue);
+            return symmetricKey;
+        }
+
+        int index = acct.getColumnIndex(Tags.DB_FIELD_GROUP_SYMMETRIC_KEY);
+        acct.moveToFirst();
+        symmetricKey = acct.getString(index);
+
+        return symmetricKey;
+    }
+
+    private String getBlockChainIDFromAddress(String address) {
+        if (address.indexOf("@") <= 0) {
+            return address;
+        }
+        return address.substring(0, address.indexOf("@"));
     }
 
 }

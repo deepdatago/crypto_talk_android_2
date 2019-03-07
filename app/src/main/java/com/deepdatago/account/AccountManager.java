@@ -7,6 +7,8 @@ import org.json.JSONObject;
 
 import android.content.Context;
 import java.security.PublicKey;
+import java.util.ArrayList;
+
 /**
  * Created by tnnd on 7/5/18.
  */
@@ -111,5 +113,21 @@ public interface AccountManager {
      * @return      public key
      */
     public PublicKey getPublicKey(String address);
+
+    /**
+     * create group chat
+     *
+     * @param   groupAddress: address for the group
+     * @return      success or failure
+     */
+    public boolean createGroupChat(String groupAddress, ArrayList<String> invitees);
+
+    /**
+     * get group key
+     *
+     * @param   groupAddress: address for the group
+     * @return      Shared symmetric key for this group
+     */
+    public String getGroupKey(String groupAddress);
 
 }

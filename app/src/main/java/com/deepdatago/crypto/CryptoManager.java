@@ -133,4 +133,13 @@ public interface CryptoManager {
 	 */
 	public InputStream decryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream);
 
+	/**
+	 * Decrypt input stream with given symmetric key
+	 *
+	 * @param  inPrivateKey private key
+	 * @param  inString input string to be signed, which needs to be decrypted
+	 * @return      base64 encoded signed string
+	 */
+	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString);
+
 }
