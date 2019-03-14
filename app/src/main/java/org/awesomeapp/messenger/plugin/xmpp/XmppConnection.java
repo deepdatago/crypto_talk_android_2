@@ -1772,7 +1772,10 @@ public class XmppConnection extends ImConnection {
 
                     try {
 
-
+                        // [CRYPTO_TALK] get group key from server
+                        AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+                        boolean getGroupKeyFlag = accountManager.getGroupKeyFromServer(muc.getRoom().toString());
+                        // [CRYPTO_TALK] end of get group key from server
 
                         getChatGroupManager().acceptInvitationAsync(invite.getFrom().toString());
                         XmppAddress xa = new XmppAddress(muc.getRoom().toString());

@@ -14,6 +14,7 @@ public class Tags {
     static public String REQUEST_SUMMARY_API = "request/summary/?";
     static public String FRIEND_REQUEST_API = "request/friend/";
     static public String REQUEST_GROUP_INVITE_API = "request/group_invite/";
+    static public String REQUEST_INVITE_API = "request/invite/?";
     static public String GET_PUBLIC_KEY_API = "accounts/get_public_key/";
     static public String ACCOUNT_REGISTER_API = "accounts/register/";
     static public String APPROVED_DETAILS_API = "request/approved_details/?";
@@ -59,6 +60,7 @@ public class Tags {
     static public String TRANSACTION = "transaction";
     static public String PUBLIC_KEY = "publicKey";
     static public String ACTION_TYPE = "action_type";
+    static public String GROUP_KEY = "group_key";
 
     /* enum types */
     static public int FriendRequest = 0;

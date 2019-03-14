@@ -92,7 +92,8 @@ public class Downloader {
                     InputStream decryptedInputStream = mCryptoManager.decryptInputStreamWithSymmetricKey(mTestKey, encryptedInputStream);
 
                     if (decryptedInputStream == null ) {
-                        decryptedInputStream = new info.guardianproject.iocipher.FileInputStream(tmpFileNew);
+                        Log.d("Download","Error decrypt media");
+                        return false;
                     }
 
                     OutputStream os = setupOutputStream(storageStream, url.getRef());

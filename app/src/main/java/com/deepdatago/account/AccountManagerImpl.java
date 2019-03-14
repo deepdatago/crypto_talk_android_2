@@ -778,7 +778,7 @@ public class AccountManagerImpl implements AccountManager {
 
     public boolean createGroupChat(String groupAddress, ArrayList<String> invitees) {
         Account account = createAccount();
-        String transactionStr = null;
+        // String transactionStr = null;
         try {
             // System.out.println("from_address: " + account.getAddress().getHex());
 
@@ -788,17 +788,17 @@ public class AccountManagerImpl implements AccountManager {
 
             PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
 
-            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString);
+            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString, false);
 
             // System.out.println("public key: " + data);
-            transactionStr = signTransaction(account, signedTimeString.getBytes("UTF8"));
+            // transactionStr = signTransaction(account, signedTimeString.getBytes("UTF8"));
             // System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
             JSONObject requestNode = new JSONObject();
             requestNode.put(Tags.FROM_ADDRESS, account.getAddress().getHex());
             requestNode.put(Tags.GROUP_ADDRESS, groupAddress);
             requestNode.put(Tags.TIME_STAMP, timeString);
             // System.out.println("time stamp: " + timeString + " signed time stamp: " + signStringByPrivateKey(privateKey, timeString));
-            requestNode.put(Tags.REQUEST, transactionStr);
+            requestNode.put(Tags.ENCODED_SIGNATURE, signedTimeString);
 
             // add inviteeList into JSONArray
             JSONObject inviteeDict = new JSONObject();
@@ -868,6 +868,71 @@ public class AccountManagerImpl implements AccountManager {
             return address;
         }
         return address.substring(0, address.indexOf("@"));
+    }
+
+    public boolean getGroupKeyFromServer(String groupAddress) {
+        String address = getBlockChainIDFromAddress(groupAddress);
+        Account account = createAccount();
+        try {
+            // replace data by public key
+            long unixTime = System.currentTimeMillis() / 1000L;
+            String timeString = Long.toString(unixTime);
+
+            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+
+            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString, true);
+
+            String lURL = Tags.BASE_URL + Tags.REQUEST_INVITE_API;
+
+            lURL += Tags.TO_ADDRESS + "=" + account.getAddress().getHex() + "&";
+            lURL += Tags.TIME_STAMP + "=" + timeString + "&";
+            lURL += Tags.GROUP_ADDRESS + "=" + address + "&";
+            lURL += Tags.ENCODED_SIGNATURE + "=" + signedTimeString;
+
+            JSONObject response = sendGetRequestSync(lURL);
+            if (response == null) {
+                return false;
+            }
+            System.out.println(response.toString());
+            String encryptedGroupKey = response.getString(Tags.GROUP_KEY);
+            String groupKey = this.mCryptoManager.decryptDataWithSymmetricKey(getSharedAsymmetricKey(), encryptedGroupKey);
+
+            updateGroupKey(address, groupKey);
+
+            return true;
+
+        } catch (Exception e) {
+            // transactionStr = e.getMessage();
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private void updateGroupKey(String groupAddress, String groupKey) {
+        if (sContentResolver == null) {
+            return;
+        }
+        String address = getBlockChainIDFromAddress(groupAddress);
+        // ContentResolver lResolver = new ContentResolver
+        final String[] projection = { Tags.DB_FIELD_GROUP_SYMMETRIC_KEY};
+        String selection = Tags.DB_FIELD_GROUP_ADDRESS + "='" + address + "'";
+
+        Cursor group = sContentResolver.query(Tags.CRYPTO_GROUPS_KEYS_URI, projection, selection, null, null);
+
+        String symmetricKey = null;
+        ContentValues groupValue = new ContentValues(1); // only generate one record
+
+        groupValue.put(Tags.DB_FIELD_GROUP_SYMMETRIC_KEY, groupKey);
+        groupValue.put(Tags.DB_FIELD_GROUP_ADDRESS, address);
+
+        if (group.getCount() == 0)
+        {
+            Uri uri = null;
+            uri = sContentResolver.insert(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue);
+            return;
+        }
+        sContentResolver.update(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue, selection, null);
     }
 
 }

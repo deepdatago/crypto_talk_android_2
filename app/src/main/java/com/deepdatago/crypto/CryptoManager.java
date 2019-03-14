@@ -138,8 +138,9 @@ public interface CryptoManager {
 	 *
 	 * @param  inPrivateKey private key
 	 * @param  inString input string to be signed, which needs to be decrypted
+	 * @param  urlEncode whether do url encode
 	 * @return      base64 encoded signed string
 	 */
-	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString);
+	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString, boolean urlEncode);
 
 }

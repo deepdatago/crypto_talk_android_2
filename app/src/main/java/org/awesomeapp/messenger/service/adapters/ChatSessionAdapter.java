@@ -563,7 +563,9 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
 
     private void sendMediaMessageAsync (final String mediaPath, final String mimeType, final String fileName, final InputStream fis, final long fileLength)
     {
-
+        // [CRYPTO_TALK] take whether it's group chat
+        final boolean isGroupChat = this.mIsGroupChat;
+        // [CRYPTO_TALK] end of take whether it's group chat
         //TODO do HTTP Upload XEP 363
         //this is ugly... we need a nice async task!
         new Thread ()
@@ -620,7 +622,13 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                     // Log.e(TAG,"sendFileName: " + sendFileName + " and mediaPath: " + mediaPath);
                     String address = mChatSession.getParticipant().getAddress().getUser();
                     com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
-                    String symmetricKey = accountManager.getSymmetricKey(address);
+                    String symmetricKey = null;
+                    if (isGroupChat) {
+                        symmetricKey = accountManager.getGroupKey(address);
+                    }
+                    else {
+                        symmetricKey = accountManager.getSymmetricKey(address);
+                    }
 
                     InputStream cipherStream = mCryptoManager.encryptInputStreamWithSymmetricKey(symmetricKey, fis);
                     // [CRYPTO_TALK] end
@@ -1178,7 +1186,11 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                 JSONObject keys = accountManager.getFriendKeys(remoteAddressID);
                 String privateAsymmetricKey = "";
                 String oldBody = body;
-                if (keys != null) {
+                if (mIsGroupChat) {
+                    privateAsymmetricKey = accountManager.getGroupKey(remoteAddressID);
+                    body = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                }
+                else if (keys != null) {
                     try {
                         privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
                         body = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, body);
@@ -2049,6 +2061,9 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
             String address = mChatSession.getParticipant().getAddress().getUser();
             com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
             String symmetricKey = accountManager.getSymmetricKey(address);
+            if (mIsGroupChat) {
+                symmetricKey = accountManager.getGroupKey(address);
+            }
             Downloader dl = new Downloader(mCryptoManager, symmetricKey);
             File fileDownload = dl.openSecureStorageFile(mContactId + "", mediaLink);
             // [CRYPTO_TALK] end

@@ -33,6 +33,7 @@ import java.security.spec.X509EncodedKeySpec;
 import android.util.Base64;
 import java.util.Date;
 import java.util.Map;
+import java.net.URLEncoder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -513,7 +514,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		return null;
 	}
 
-	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString) {
+	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString, boolean urlEncode) {
 		try {
 			byte[] data = inString.getBytes();
 			Signature sig = Signature.getInstance(this.signatureAlg);
@@ -521,6 +522,9 @@ public class CryptoManagerImpl implements CryptoManager {
 			sig.update(data);
 			byte[] signatureBytes = sig.sign();
 			String signatureStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
+			if (urlEncode) {
+				return URLEncoder.encode(signatureStr, "UTF-8");
+			}
 			return signatureStr;
 		}
 		catch (Exception e) {

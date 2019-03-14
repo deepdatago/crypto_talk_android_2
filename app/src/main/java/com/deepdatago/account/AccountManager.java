@@ -130,4 +130,12 @@ public interface AccountManager {
      */
     public String getGroupKey(String groupAddress);
 
+    /**
+     * get group key from server, persist it into database
+     *
+     * @param   groupAddress: address for the group
+     * @return      boolean value indicate success or failure
+     */
+    public boolean getGroupKeyFromServer(String groupAddress);
+
 }
