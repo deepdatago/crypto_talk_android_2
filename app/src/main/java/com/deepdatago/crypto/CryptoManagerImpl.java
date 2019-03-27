@@ -1,5 +1,6 @@
 package com.deepdatago.crypto;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -8,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -30,6 +32,8 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+
+import android.content.ContentResolver;
 import android.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -59,7 +63,7 @@ import org.bouncycastle.util.io.pem.PemWriter;
 import android.util.Log;
 
 public class CryptoManagerImpl implements CryptoManager {
-	private final String algorithm; // "RSA"
+	private final String algorithm;
 	private final int keySize; // 4096
 	private final int certExpireInDays; // 365
 	private final String signatureAlg; // signatureAlgorithm "SHA256withRSA"
@@ -72,9 +76,20 @@ public class CryptoManagerImpl implements CryptoManager {
 	private final String certificateDescription = "CERTIFICATE";
 
 	private final String providerName = "BC"; // for bouncy castle
+	private static final String cryptoAlgorithmAES = "AES"; // for bouncy castle
+	private final String cipherAsymmetricTransformation = "RSA/ECB/PKCS1Padding";
+	private final String ciphersSymmetricTransformation = "AES/ECB/PKCS7Padding";
 	private final String commonName; // "CN=KeyManagerTest"
 	private static CryptoManagerImpl msCryptoManager = null;
+	private static java.io.File sFileDirectory = null;
+	private final String mKeyStoreName = "keystore";
+	private final String mPublicKeyName = "account_rsa_public.pem"; // in mFileDir/keystore
+	private final String mPrivateKeyName = "account_rsa_private.pem"; // in mFileDir/keystore
 
+	private PublicKey mPublicKey = null;
+	private PrivateKey mPrivateKey = null;
+
+	/*
 	public CryptoManagerImpl(String algorithm,
 			String signatureAlg, 
 			int keySize, 
@@ -88,6 +103,7 @@ public class CryptoManagerImpl implements CryptoManager {
     	Security.addProvider(new BouncyCastleProvider());
     	fixAESKeyLength();
 	}
+	*/
 	public CryptoManagerImpl() {
 		this.algorithm = "RSA";
 		this.keySize = 4096;
@@ -96,9 +112,17 @@ public class CryptoManagerImpl implements CryptoManager {
 		this.commonName = "CN=KeyManagerTest";
     	Security.addProvider(new BouncyCastleProvider());
     	fixAESKeyLength();
+
+		// initialize keys
+    	generateKeyPair();
+    	this.mPublicKey = loadPublicKey();
+    	this.mPrivateKey = loadPrivateKey();
 	}
 
 	public static CryptoManager getInstance() {
+		if (CryptoManagerImpl.sFileDirectory == null) {
+			return null;
+		}
 		if (msCryptoManager == null) {
 			synchronized (CryptoManagerImpl.class) {
 				if (msCryptoManager == null) {
@@ -109,28 +133,43 @@ public class CryptoManagerImpl implements CryptoManager {
 		return msCryptoManager;
 	}
 
-	public void generateKeyCertificate(String privKeyFileName, String publicKeyFileName, String certFileName) {
-    	KeyPair keyPair;
+	private boolean generateKeyPair() {
+		if (getPublicKeyString() != null) {
+			// no need to re-generate keypair
+			return false;
+		}
+    	String privKeyFileName = getPrivateKeyFileName();
+    	String publicKeyFileName = getPublicKeyFileName();
+    	// String certFileName = null;
+
+		KeyPair keyPair;
     	PrivateKey privateKey;
     	PublicKey publicKey;
     	
 		try {
-			keyPair = generateKeyPair(this.algorithm, this.keySize);
+			keyPair = generate(this.algorithm, this.keySize);
 			privateKey = keyPair.getPrivate();
 			publicKey = keyPair.getPublic();
+			// getKeyStoreDir();
+			File keyStoreFolder = new File(getKeyStoreDir());
+			if (!keyStoreFolder.exists()) {
+				keyStoreFolder.mkdirs();
+			}
 			writePemFile(privateKey.getEncoded(), this.privateKeyDescription, privKeyFileName);
 			writePemFile(publicKey.getEncoded(), this.publicKeyDescription, publicKeyFileName);
 			
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
-			return;
+			return false;
 		} catch (IOException e) {
 			e.printStackTrace();
-			return;
+			return false;
 		}
-		
+		return true;
+
+		/* for future use
 		if (certFileName == null)
-			return;
+			return true; // certFile is optional to generate
 		
     	ContentSigner sigGen;
 		try {
@@ -138,7 +177,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		} catch (OperatorCreationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return;
+			return false;
 		}
 
     	SubjectPublicKeyInfo subPubKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded());
@@ -158,20 +197,20 @@ public class CryptoManagerImpl implements CryptoManager {
 		try {
 			certificate = new JcaX509CertificateConverter().setProvider(this.providerName)
 				  .getCertificate( certHolder );
-	    	writePemFile(certificate.getEncoded(), this.certificateDescription, certFileName);		
+	    	writePemFile(certificate.getEncoded(), this.certificateDescription, certFileName);
+	    	return true;
 		} catch (CertificateException e) {
 			e.printStackTrace();
-			return;
 		} catch (IOException e) {
 			e.printStackTrace();
-			return;
 		}
+		return false;
+		*/
 	}
 
 	public PublicKey loadPublicKeyFromRSAPEMString(String publicKeyStr) {
 		try {
-			String instanceName = "RSA"; // RSA
-			KeyFactory factory = KeyFactory.getInstance(instanceName, this.providerName);
+			KeyFactory factory = KeyFactory.getInstance(this.algorithm, this.providerName);
 			byte[] keyBytes = Base64.decode(publicKeyStr, Base64.DEFAULT);
 			/*
 			String tmpStr = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhduH6p/KZcbvgCmJPsaS\n" +
@@ -197,31 +236,42 @@ public class CryptoManagerImpl implements CryptoManager {
 		return null;
 	}
 
-	public PublicKey loadPublicKeyFromRSAPEM(String fileName) 
+	public PublicKey getPublicKey() {
+		return mPublicKey;
+	}
+
+	private PublicKey loadPublicKey()
+	{
+    	PEMParser pemParser = null;
+    	PemObject pemObject = null;
+    	KeyFactory factory = null;
+    	try {
+			File privateKeyFile = new File(getPublicKeyFileName());
+			pemParser = new PEMParser(new FileReader(privateKeyFile));
+			pemObject = pemParser.readPemObject();
+			factory = KeyFactory.getInstance(this.algorithm, this.providerName);
+			pemParser.close();
+
+			byte[] content = pemObject.getContent();
+			X509EncodedKeySpec privKeySpec =
+					new X509EncodedKeySpec(content);
+
+			return factory.generatePublic(privKeySpec);
+		}
+		catch (Exception e) {
+			/*
 		throws FileNotFoundException,
 		IOException,
 		NoSuchAlgorithmException,
 		NoSuchProviderException,
 		InvalidKeySpecException
-	{
-    	String instanceName = "RSA";
-    	PEMParser pemParser = null;
-    	PemObject pemObject = null;
-    	KeyFactory factory = null;
-		File privateKeyFile = new File(fileName);
-		pemParser = new PEMParser(new FileReader(privateKeyFile));
-		pemObject = pemParser.readPemObject();
-    	factory = KeyFactory.getInstance(instanceName, this.providerName);
-		pemParser.close();
-
-		byte[] content = pemObject.getContent();
-	    X509EncodedKeySpec privKeySpec =
-	  	      new X509EncodedKeySpec(content);
-		
-		return factory.generatePublic(privKeySpec);
+		*/
+			e.printStackTrace();
+		}
+		return null;
 	}
 
-    
+	/*
 	public PublicKey loadPublicKeyFromRSA_X509_CertificatePEM(String fileName)
 			throws IOException, NoSuchProviderException, NoSuchAlgorithmException {
     	X509Certificate certificate = null;
@@ -242,52 +292,57 @@ public class CryptoManagerImpl implements CryptoManager {
     	
     	return certificate.getPublicKey();
     }
+    */
 
-    public PrivateKey loadPrivateKeyFromRSAPEM(String fileName) 
-    		throws IOException, NoSuchProviderException, NoSuchAlgorithmException {
-    	String instanceName = "RSA";
+	public PrivateKey getPrivateKey () {
+		return this.mPrivateKey;
+	}
+
+    private PrivateKey loadPrivateKey() {
     	PEMParser pemParser = null;
-		File privateKeyFile = new File(fileName);
-		pemParser = new PEMParser(new FileReader(privateKeyFile));
-		PemObject pemObject = pemParser.readPemObject();
-    	KeyFactory factory = KeyFactory.getInstance(instanceName, this.providerName);
-    	byte[] content = pemObject.getContent();
-		PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(content);
-		pemParser.close();
-		try {
+    	try {
+			File privateKeyFile = new File(getPrivateKeyFileName());
+			pemParser = new PEMParser(new FileReader(privateKeyFile));
+			PemObject pemObject = pemParser.readPemObject();
+			KeyFactory factory = KeyFactory.getInstance(this.algorithm, this.providerName);
+			byte[] content = pemObject.getContent();
+			PKCS8EncodedKeySpec privKeySpec = new PKCS8EncodedKeySpec(content);
+			pemParser.close();
 			return factory.generatePrivate(privKeySpec);
-		} catch (InvalidKeySpecException e) {
-			// TODO Auto-generated catch block
+		}
+		catch (Exception e) {
+			// throws IOException,
+			// NoSuchProviderException,
+			// NoSuchAlgorithmException
 			e.printStackTrace();
-		}	   
+		}
 		return null;
     }   	
     
-    public String encryptTextBase64(PublicKey key, byte[] text) throws Exception
+    public String encryptStrWithPublicKey(PublicKey key, String text) throws Exception
     {
         byte[] cipherText = null;
         //
         // get an RSA cipher object and print the provider
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        Cipher cipher = Cipher.getInstance(this.cipherAsymmetricTransformation);
 
         // encrypt the plaintext using the public key
         cipher.init(Cipher.ENCRYPT_MODE, key);
-        cipherText = cipher.doFinal(text);
+        cipherText = cipher.doFinal(text.getBytes());
 
         // iOS cannot decrypt string with "\n"
         return new String(Base64.encode(cipherText, Base64.DEFAULT)).replaceAll("\n", "");
     }    
     
-    public String decryptTextBase64(PrivateKey key, byte[] text) throws Exception
+    public String decryptStrWithPrivateKey(PrivateKey key, String text) throws Exception
     {
-    	byte[] decodedBytes = Base64.decode(text, Base64.DEFAULT);
+    	byte[] decodedBytes = Base64.decode(text.getBytes(), Base64.DEFAULT);
         byte[] dectyptedText = null;
         // decrypt the text using the private key
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        Cipher cipher = Cipher.getInstance(this.cipherAsymmetricTransformation);
         cipher.init(Cipher.DECRYPT_MODE, key);
         dectyptedText = cipher.doFinal(decodedBytes);
         return new String(dectyptedText);
-
     }
     
     private void writePemFile(byte[] encodedBytes, String description, String filename) throws IOException {
@@ -297,7 +352,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		pemWriter.writeObject(pemObject);
 		pemWriter.close();
 	}
-	private KeyPair generateKeyPair(String algorithm, int keySize) throws NoSuchAlgorithmException {
+	private KeyPair generate(String algorithm, int keySize) throws NoSuchAlgorithmException {
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
 		keyGen.initialize(keySize);
 		return keyGen.genKeyPair();
@@ -307,7 +362,7 @@ public class CryptoManagerImpl implements CryptoManager {
         String errorString = "Failed manually overriding key-length permissions.";
         int newMaxKeyLength;
         try {
-            if ((newMaxKeyLength = Cipher.getMaxAllowedKeyLength("AES")) < 256) {
+            if ((newMaxKeyLength = Cipher.getMaxAllowedKeyLength(CryptoManagerImpl.cryptoAlgorithmAES)) < 256) {
                 Class c = Class.forName("javax.crypto.CryptoAllPermissionCollection");
                 Constructor con = c.getDeclaredConstructor(null);
                 con.setAccessible(true);
@@ -332,7 +387,7 @@ public class CryptoManagerImpl implements CryptoManager {
                 mf.setInt(f, f.getModifiers() & ~Modifier.FINAL);
                 f.set(null, allPermissions);
 
-                newMaxKeyLength = Cipher.getMaxAllowedKeyLength("AES");
+                newMaxKeyLength = Cipher.getMaxAllowedKeyLength(CryptoManagerImpl.cryptoAlgorithmAES);
             }
         } catch (Exception e) {
             throw new RuntimeException(errorString, e);
@@ -341,17 +396,13 @@ public class CryptoManagerImpl implements CryptoManager {
             throw new RuntimeException(errorString); // hack failed
     }
 
-	public String encryptDataWithSymmetricKey(String inKey, String data) {
+	public String encryptStringWithSymmetricKey(String inKey, String data) {
 		Log.d("CryptoManagerImpl", data);
-		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), CryptoManagerImpl.cryptoAlgorithmAES);
 
 		Cipher cipher = null;
 		try {
-			// int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
-			// System.out.println("max allowed length: " + maxKeyLen);
-
-
-			cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			cipher = Cipher.getInstance(this.ciphersSymmetricTransformation, this.providerName);
 			cipher.init(Cipher.ENCRYPT_MODE, key);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
@@ -386,20 +437,16 @@ public class CryptoManagerImpl implements CryptoManager {
 		return encodedEncryptedStr;
 	}
 
-	public String decryptDataWithSymmetricKey(String inKey, String data) {
+	public String decryptStringWithSymmetricKey(String inKey, String data) {
 		byte[] decryptedPlainText = null;
 		int ptLength = 0;
 		Cipher cipher = null;
 		if (inKey.length() == 0 || data.length() == 0) {
 			return "";
 		}
-		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+		SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), CryptoManagerImpl.cryptoAlgorithmAES);
 		try {
-			// int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
-			// System.out.println("max allowed length: " + maxKeyLen);
-
-
-			cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			cipher = Cipher.getInstance(this.ciphersSymmetricTransformation, this.providerName);
 			cipher.init(Cipher.DECRYPT_MODE, key);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
@@ -433,7 +480,7 @@ public class CryptoManagerImpl implements CryptoManager {
 		String decryptedString = new String(decryptedPlainText);
 		return decryptedString;
 	}
-
+	/*
 	public void encryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName) {
 		try {
 			File inputFile = new File(inputFileName);
@@ -458,8 +505,8 @@ public class CryptoManagerImpl implements CryptoManager {
 	private void doCrypto(int cipherMode, String inKey, File inputFile,
 						  File outputFile) throws Exception {
 		try {
-			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
-			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), CryptoManagerImpl.cryptoAlgorithmAES);
+			Cipher cipher = Cipher.getInstance(this.ciphersSymmetricTransformation, this.providerName);
 			cipher.init(cipherMode, key);
 
 			FileInputStream inputStream = new FileInputStream(inputFile);
@@ -478,19 +525,20 @@ public class CryptoManagerImpl implements CryptoManager {
 			throw e;
 		}
 	}
+	*/
 
-	public InputStream encryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream) {
+	public InputStream encryptDataWithSymmetricKey(String inKey, InputStream inputStream) {
 		return doCryptoStream(Cipher.ENCRYPT_MODE, inKey, inputStream);
 	}
 
-	public InputStream decryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream) {
+	public InputStream decryptDataWithSymmetricKey(String inKey, InputStream inputStream) {
 		return doCryptoStream(Cipher.DECRYPT_MODE, inKey, inputStream);
 	}
 
 	public InputStream doCryptoStream(int cipherMode, String inKey, InputStream inputStream) {
 		try {
-			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
-			Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+			SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), CryptoManagerImpl.cryptoAlgorithmAES);
+			Cipher cipher = Cipher.getInstance(this.ciphersSymmetricTransformation, this.providerName);
 			cipher.init(cipherMode, key);
 
 			// FileInputStream inputStream = new FileInputStream(inputFile);
@@ -514,11 +562,11 @@ public class CryptoManagerImpl implements CryptoManager {
 		return null;
 	}
 
-	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString, boolean urlEncode) {
+	public String signStrWithPrivateKey(String inString, boolean urlEncode) {
 		try {
 			byte[] data = inString.getBytes();
 			Signature sig = Signature.getInstance(this.signatureAlg);
-			sig.initSign(inPrivateKey);
+			sig.initSign(getPrivateKey());
 			sig.update(data);
 			byte[] signatureBytes = sig.sign();
 			String signatureStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
@@ -528,6 +576,75 @@ public class CryptoManagerImpl implements CryptoManager {
 			return signatureStr;
 		}
 		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public static void initStaticMembers(java.io.File iFileDirectory) {
+		if (sFileDirectory != null) {
+			return;
+		}
+		sFileDirectory = iFileDirectory;
+		CryptoManagerImpl.getInstance();
+	}
+
+	private String getKeyStoreDir() {
+		return sFileDirectory + "/" + this.mKeyStoreName;
+	}
+	private String getPrivateKeyFileName() {
+		String privateKeyName = getKeyStoreDir() + "/" + this.mPrivateKeyName;
+		return privateKeyName;
+	}
+
+	private String getPublicKeyFileName() {
+		String publicKeyName = getKeyStoreDir() + "/" + this.mPublicKeyName;
+		return publicKeyName;
+	}
+
+	private String getStringFromFile (String filePath) {
+		File fl = new File(filePath);
+		FileInputStream fin = null;
+		try {
+			fin = new FileInputStream(fl);
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
+			StringBuilder sb = new StringBuilder();
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				sb.append(line).append("\n");
+			}
+			reader.close();
+			String ret = sb.toString();
+			//Make sure you close all streams.
+			// fin.close();
+			return ret;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			try {
+				fin.close();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+
+	// This function is only used once in this app, so, do not need to keep pubilc key string in memory
+	public String getPublicKeyString() {
+		File publicKeyFile = new File(getPublicKeyFileName());
+		if (! publicKeyFile.exists()) {
+			return null;
+		}
+		String publicKeyContent = null;
+		try {
+			publicKeyContent = getStringFromFile(getPublicKeyFileName());
+			return publicKeyContent;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;

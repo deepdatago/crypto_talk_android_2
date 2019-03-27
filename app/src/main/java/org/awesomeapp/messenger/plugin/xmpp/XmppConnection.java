@@ -307,7 +307,7 @@ public class XmppConnection extends ImConnection {
     // [CRYPTO_TALK]
     // mDeepDatagoAccountManager cannot be instantiated in constructor, because the needed static members are not set yet
     // it MUST be null-checked and instantiated within business logic
-    private AccountManager mDeepDatagoAccountManager = null;
+    // private DeepDatagoManager mDeepDatagoAccountManager = null;
 
     public XmppConnection(Context context) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException {
         super(context);
@@ -502,13 +502,12 @@ public class XmppConnection extends ImConnection {
                     String vCardNickName = vCard.getNickName();
                     String contactUserName = contact.getAddress().getUser();
                     // get symmetric_key_for_all_friends for user contactUserName, this is the key to decrypt nickname
-                    mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+                    DeepDatagoManager deepDatagoAccountManager = com.deepdatago.account.DeepDatagoManagerImpl.getInstance();
 
-                    JSONObject keysObj = mDeepDatagoAccountManager.getFriendKeys(contactUserName);
-                    if (keysObj != null) {
-                        String keyForAllFriends = keysObj.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
+                    String keyForAllFriends = deepDatagoAccountManager.getAllFriendsKey(contactUserName);
+                    if (keyForAllFriends != null) {
                         CryptoManager cryptoManager = com.deepdatago.crypto.CryptoManagerImpl.getInstance();
-                        String decryptedNickName = cryptoManager.decryptDataWithSymmetricKey(keyForAllFriends, vCardNickName);
+                        String decryptedNickName = cryptoManager.decryptStringWithSymmetricKey(keyForAllFriends, vCardNickName);
                         if (decryptedNickName.length() == 0 && vCardNickName.length() > 0) {
                             contact.setName(vCardNickName);
                             mContactListManager.doSetContactName(contact.getAddress().getBareAddress(), contact.getName());
@@ -1773,7 +1772,7 @@ public class XmppConnection extends ImConnection {
                     try {
 
                         // [CRYPTO_TALK] get group key from server
-                        AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+                        DeepDatagoManager accountManager = com.deepdatago.account.DeepDatagoManagerImpl.getInstance();
                         boolean getGroupKeyFlag = accountManager.getGroupKeyFromServer(muc.getRoom().toString());
                         // [CRYPTO_TALK] end of get group key from server
 
@@ -1915,11 +1914,11 @@ public class XmppConnection extends ImConnection {
 
             // [CRYPTO_TALK] encrypt nickname before sending out
             String nickName = mUser.getName();
-            final AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
+            final DeepDatagoManager accountManager = com.deepdatago.account.DeepDatagoManagerImpl.getInstance();
 
-            String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
+            String sharedSymmetricKey = accountManager.getSharedKeyForAllFriends();
             CryptoManager cryptoManager = new CryptoManagerImpl();
-            String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, nickName);
+            String encryptedNickname = cryptoManager.encryptStringWithSymmetricKey(sharedSymmetricKey, nickName);
 
 
             // vCard.setNickName(mUser.getName());
@@ -2808,9 +2807,9 @@ public class XmppConnection extends ImConnection {
                     // [CRYPTO_TALK] encrypt message body
                     String groupAddress = message.getTo().getAddress();
                     CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
-                    AccountManager accountManager = AccountManagerImpl.getInstance();
+                    DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                     String groupKey = accountManager.getGroupKey(groupAddress);
-                    message.setBody(cryptoManager.encryptDataWithSymmetricKey(groupKey, message.getBody()));
+                    message.setBody(cryptoManager.encryptStringWithSymmetricKey(groupKey, message.getBody()));
                     // [CRYPTO_TALK] END encrypt message body
                 } else {
                     msgXmpp = new org.jivesoftware.smack.packet.Message(
@@ -3500,15 +3499,15 @@ public class XmppConnection extends ImConnection {
             // [CRYPTO_TALK]
             // contact.getName(); // 3724570f080259c02b05d91f80ac68a0bd486ad1
             // AccountManager accountManager = new AccountManagerImpl(null);
-            mDeepDatagoAccountManager = com.deepdatago.account.AccountManagerImpl.getInstance();
-            final Account account = mDeepDatagoAccountManager.createAccount();
+            DeepDatagoManager deepDatagoManager = com.deepdatago.account.DeepDatagoManagerImpl.getInstance();
 
-            String contactSharedKey = mDeepDatagoAccountManager.getSharedKey(contact.getAddress().getUser());
+            String contactSharedKey = deepDatagoManager.getAllFriendsKey(contact.getAddress().getUser());
             if (contactSharedKey != null && contactSharedKey.length() == 0) {
-                mDeepDatagoAccountManager.getApprovedDetails(contact.getAddress().getUser(), mContext);
+                deepDatagoManager.getApprovedDetails(contact.getAddress().getUser(), mContext);
             }
 
-            JSONArray responseArray = mDeepDatagoAccountManager.getSummary(account.getAddress().getHex(), mContext);
+            // JSONArray responseArray = deepDatagoManager.getSummary(account.getAddress().getHex(), mContext);
+            JSONArray responseArray = deepDatagoManager.getSummary(null, mContext);
             if (responseArray != null) {
                 try {
                     for (int i = 0; i < responseArray.length(); i++) {
@@ -3601,9 +3600,9 @@ public class XmppConnection extends ImConnection {
                         // [CRYPTO_TALK] approve friend request
                         {
                             String toAddress = contact.getAddress().getUser();
-                            mDeepDatagoAccountManager = AccountManagerImpl.getInstance();
+                            DeepDatagoManager deepDatagoAccountManager = DeepDatagoManagerImpl.getInstance();
 
-                            mDeepDatagoAccountManager.friendRequestSync(toAddress, Tags.ApproveRequest);
+                            deepDatagoAccountManager.friendRequestSync(toAddress, Tags.ApproveRequest);
                         }
 
                         BareJid bareJid = JidCreate.bareFrom(contact.getAddress().getBareAddress());

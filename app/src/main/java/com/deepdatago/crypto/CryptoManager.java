@@ -12,43 +12,30 @@ public interface CryptoManager {
 	/**
 	 * Generate PrivateKey and Certificate 
 	 *
-	 * @param  privKeyFileName  output file name of private key 
-	 * @param  publicKeyFileName  output file name of public key 
-	 * @param  certFileName output file name of certificate, could be null
 	 * @return      None
 	 */	
-	public void generateKeyCertificate(String privKeyFileName, String publicKeyFileName, String certFileName);
+	// public boolean generateKeyPair();
 	
-	/**
-	 * Generate public key from a RSA X.509 certificate file 
-	 *
-	 * @param  certFileName input file name of certificate
-	 * @return      PublicKey
-	 */	
-	public PublicKey loadPublicKeyFromRSA_X509_CertificatePEM(String certFileName) 
-			throws IOException, NoSuchProviderException, NoSuchAlgorithmException;
-
 	/**
 	 * Generate private key from a RSA PEM file 
 	 *
-	 * @param  privateKeyFileName input file name of private key
 	 * @return      PrivateKey
 	 */		
-	public PrivateKey loadPrivateKeyFromRSAPEM(String privateKeyFileName) 
-			throws IOException, NoSuchProviderException, NoSuchAlgorithmException;
-	
+	public PrivateKey getPrivateKey();
+
 	/**
-	 * Generate public key from a RSA public key PEM file
+	 * Get public key from a RSA public key PEM file
 	 *
-	 * @param  fileName  input file name of a public key 
 	 * @return      PublicKey
 	 */		
-	public PublicKey loadPublicKeyFromRSAPEM(String fileName) throws
-		FileNotFoundException,
-		IOException,
-		NoSuchAlgorithmException,
-		NoSuchProviderException,
-		InvalidKeySpecException;
+	public PublicKey getPublicKey();
+
+	/**
+	 * Get public key string from a RSA public key PEM file
+	 *
+	 * @return      PublicKey
+	 */
+	public String getPublicKeyString();
 
 	/**
 	 * Generate public key from a RSA public key PEM string format
@@ -61,20 +48,20 @@ public interface CryptoManager {
 	/**
 	 * Encrypt a byte[] with given public key, and encode it with Base64
 	 *
-	 * @param  text input byte[] from text that needs to be encrypted
+	 * @param  text String that needs to be encrypted
 	 * @param  key public key that is used to encrypt the given byte[]
 	 * @return      Base64 encoded string of encrypted byte[]
 	 */	
-    public String encryptTextBase64(PublicKey key, byte[] text) throws Exception;
+    public String encryptStrWithPublicKey(PublicKey key, String text) throws Exception;
 
 	/**
 	 * Decrypt a byte[] which is Base64 encoded with given private key
 	 *
-	 * @param  text input byte[] that is Base64 encoded, which needs to be decrypted
+	 * @param  text Base64 encoded String which needs to be decrypted
 	 * @param  key private key that is used to decrypt the given byte[]
 	 * @return      Plain text of the encrypted byte[]
 	 */	    
-    public String decryptTextBase64(PrivateKey key, byte[] text) throws Exception;
+    public String decryptStrWithPrivateKey(PrivateKey key, String text) throws Exception;
 
 	/**
 	 * Encrypt a string with given symmetric key
@@ -83,7 +70,7 @@ public interface CryptoManager {
 	 * @param  data input string, which needs to be encrypted
 	 * @return      Base64 encoded string of the encrypted data
 	 */
-	public String encryptDataWithSymmetricKey(String inKey, String data);
+	public String encryptStringWithSymmetricKey(String inKey, String data);
 
 	/**
 	 * Decrypt a string with given symmetric key
@@ -92,7 +79,7 @@ public interface CryptoManager {
 	 * @param  data input string, which needs to be decrypted
 	 * @return      Plain text string of the decrypted data
 	 */
-	public String decryptDataWithSymmetricKey(String inKey, String data);
+	public String decryptStringWithSymmetricKey(String inKey, String data);
 
 	/**
 	 * Encrypt a string with given symmetric key
@@ -102,7 +89,7 @@ public interface CryptoManager {
 	 * @param  outputFileName output file name, which needs to be written to
 	 * @return      Base64 encoded string of the encrypted data
 	 */
-	public void encryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
+	// public void encryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
 
 	/**
 	 * Decrypt a string with given symmetric key
@@ -112,17 +99,18 @@ public interface CryptoManager {
 	 * @param  outputFileName output file name, which needs to be written to
 	 * @return      Plain text string of the decrypted data
 	 */
-	public void decryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
+	// public void decryptFileWithSymmetricKey(String inKey, String inputFileName, String outputFileName);
 
 
 	/**
-	 * Encrypt a string with given symmetric key
+	 * Encrypt a string with given symmetric key.  Because ChatSessionAdapter.java::sendMediaMessageAsync
+	 * uses file input steam
 	 *
 	 * @param  inKey symmetric key that is used to encrypt the given byte[]
 	 * @param  inputStream input stream, which needs to be encrypted
 	 * @return      Cipherized input stream
 	 */
-	public InputStream encryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream);
+	public InputStream encryptDataWithSymmetricKey(String inKey, InputStream inputStream);
 
 	/**
 	 * Decrypt input stream with given symmetric key
@@ -131,16 +119,15 @@ public interface CryptoManager {
 	 * @param  inputStream input stream, which needs to be decrypted
 	 * @return      Decrypted input stream
 	 */
-	public InputStream decryptInputStreamWithSymmetricKey(String inKey, InputStream inputStream);
+	public InputStream decryptDataWithSymmetricKey(String inKey, InputStream inputStream);
 
 	/**
 	 * Decrypt input stream with given symmetric key
 	 *
-	 * @param  inPrivateKey private key
 	 * @param  inString input string to be signed, which needs to be decrypted
 	 * @param  urlEncode whether do url encode
 	 * @return      base64 encoded signed string
 	 */
-	public String signStringByPrivateKey(PrivateKey inPrivateKey, String inString, boolean urlEncode);
+	public String signStrWithPrivateKey(String inString, boolean urlEncode);
 
 }

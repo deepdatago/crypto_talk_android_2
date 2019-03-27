@@ -31,7 +31,7 @@ import net.java.otr4j.session.SessionStatus;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
-import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.DeepDatagoManagerImpl;
 import com.deepdatago.account.Tags;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
@@ -198,20 +198,11 @@ public class ChatSession {
                     String body = message.getBody();
                     // [CRYTO_TALK] add message encryption
                     if (body != null) {
-                        com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                        com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                         String senderUserID = message.getTo().getUser(); // .split("@")[0];
-                        JSONObject keys = accountManager.getFriendKeys(senderUserID);
-                        String privateAsymmetricKey = "";
-                        if (keys != null) {
-                            try {
-                                privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-
+                        String privateSymmetricKey = accountManager.getSymmetricKey(senderUserID);
                         CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
-                        body = cryptoManager.encryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                        body = cryptoManager.encryptStringWithSymmetricKey(privateSymmetricKey, body);
                         message.setBody(body);
                     }
 

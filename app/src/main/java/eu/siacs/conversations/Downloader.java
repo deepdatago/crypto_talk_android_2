@@ -89,7 +89,7 @@ public class Downloader {
                     tmpOS.close();
 
                     InputStream encryptedInputStream = new info.guardianproject.iocipher.FileInputStream(tmpFileNew);
-                    InputStream decryptedInputStream = mCryptoManager.decryptInputStreamWithSymmetricKey(mTestKey, encryptedInputStream);
+                    InputStream decryptedInputStream = mCryptoManager.decryptDataWithSymmetricKey(mTestKey, encryptedInputStream);
 
                     if (decryptedInputStream == null ) {
                         Log.d("Download","Error decrypt media");

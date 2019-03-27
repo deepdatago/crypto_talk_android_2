@@ -61,6 +61,9 @@ public class Tags {
     static public String PUBLIC_KEY = "publicKey";
     static public String ACTION_TYPE = "action_type";
     static public String GROUP_KEY = "group_key";
+    static public String XMPP_ACCOUNT_NUMBER = "xmpp_account_number";
+    static public String XMPP_ACCOUNT_PASSWORD = "xmpp_account_password";
+    static public String KEYS = "keys";
 
     /* enum types */
     static public int FriendRequest = 0;

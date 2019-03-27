@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -13,7 +12,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -50,15 +48,12 @@ import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
-import com.deepdatago.account.AccountManagerImpl;
 import com.deepdatago.crypto.CryptoManagerImpl;
-import com.deepdatago.provider.CryptoProvider;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.awesomeapp.messenger.ImApp;
 import org.awesomeapp.messenger.MainActivity;
 import org.awesomeapp.messenger.crypto.otr.OtrAndroidKeyManagerImpl;
-import org.awesomeapp.messenger.plugin.xmpp.XmppAddress;
 import org.awesomeapp.messenger.provider.Imps;
 import org.awesomeapp.messenger.tasks.AddContactAsyncTask;
 import org.awesomeapp.messenger.ui.BaseActivity;
@@ -74,21 +69,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyPair;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
-import com.deepdatago.account.AccountManager;
+
+import com.deepdatago.account.DeepDatagoManager;
 import com.deepdatago.crypto.CryptoManager;
 
 import im.zom.messenger.BuildConfig;
@@ -131,7 +122,7 @@ public class OnboardingActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
 
         // [CRYPTO_TALK] set content resolver
-        AccountManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
+        DeepDatagoManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
 
         mShowSplash = getIntent().getBooleanExtra("showSplash",true);
 
@@ -800,81 +791,52 @@ public class OnboardingActivity extends BaseActivity {
     private synchronized boolean doExistingAccountRegister ()
     {
         final String creationPassword = ((TextView)findViewById(R.id.edtPass)).getText().toString();
-        String creationNickname = ((TextView)findViewById(R.id.edtName)).getText().toString();
+        final String creationNickname = ((TextView)findViewById(R.id.edtName)).getText().toString();
         // [CRYPTO_TALK] register account
-        final AccountManager accountManager = com.deepdatago.account.AccountManagerImpl.getInstance(creationPassword);
-
-        String sharedSymmetricKey = accountManager.getSharedAsymmetricKey();
-        CryptoManager cryptoManager = new CryptoManagerImpl();
         mNickname = creationNickname;
-        // String encryptedNickname = cryptoManager.encryptDataWithSymmetricKey(sharedSymmetricKey, mNickname);
-        final Account newAccount = accountManager.createAccount();
-
-        // Create a new HttpClient and Post Header
-        String url = Tags.BASE_URL + Tags.ACCOUNT_REGISTER_API;
-        JSONObject requestNode = new JSONObject();
         try {
-            String registerRequest = accountManager.getRegisterRequest(newAccount, mNickname);
-
-            MediaType mediaTypeJSON = MediaType.parse("application/json; charset=utf-8");
-
-            final OkHttpClient client = new OkHttpClient();
-            RequestBody body = RequestBody.create(mediaTypeJSON, registerRequest);
-
-            final Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .build();
 
             AsyncTask<Void, Void, String> asyncTask = new AsyncTask<Void, Void, String>() {
                 @Override
                 protected String doInBackground(Void... params) {
                     try {
-                        Response response = client.newCall(request).execute();
-                        String responseBody = response.body().string();
-                        if (!response.isSuccessful()) {
-                            return null;
-                        }
-                        return responseBody;
+                        DeepDatagoManager deepDatagoManager = com.deepdatago.account.DeepDatagoManagerImpl.getInstance();
+                        String response = deepDatagoManager.registerRequest(creationPassword, creationNickname);
+                        return response;
+
                     } catch (Exception e) {
                         e.printStackTrace();
-                        return null;
                     }
+                    return null;
                 }
 
                 @Override
-                protected void onPostExecute(String s) {
-                    super.onPostExecute(s);
-                    String username = null;
-                    String password = null;
+                protected void onPostExecute(String response) {
+                    super.onPostExecute(response);
+
+                    if (response == null) {
+                        return;
+                    }
+
+                    String xmppUserName = null;
+                    String xmppPassword = null;
                     try {
-                        JSONObject jsonObj = new JSONObject(s);
-                        username = jsonObj.getString("xmppAccountNumber").toLowerCase() + "@" + Tags.BASE_SERVER_ADDRESS;
-                        password = jsonObj.getString("xmppAccountPassword");
+                        JSONObject jsonObj = new JSONObject(response);
+                        xmppUserName = jsonObj.getString(Tags.XMPP_ACCOUNT_NUMBER).toLowerCase() + "@" + Tags.BASE_SERVER_ADDRESS;
+                        xmppPassword = jsonObj.getString(Tags.XMPP_ACCOUNT_PASSWORD);
 
                     } catch (Exception e) {
                         return;
                     }
 
-                    ContentValues accountValue = new ContentValues(2);
-                    accountValue.put(Tags.DB_FIELD_XMPP_USER_NAME, username);
-                    accountValue.put(Tags.DB_FIELD_XMPP_PASSOWRD, password);
-                    ContentResolver resolver = getContentResolver();
-                    resolver.update(Tags.CRYPTO_ACCOUNT_URI, accountValue, "_ID=1", null);
-
-
-                    // String username = ((TextView)findViewById(R.id.edtName)).getText().toString();
-                    // String username = newAccount.getAddress().getHex();
-                    // String password = ((TextView)findViewById(R.id.edtPass)).getText().toString();
-
-                    if (verifyJabberID(username)) {
+                    if (verifyJabberID(xmppUserName)) {
 
                         if (mExistingAccountTask == null) {
                             findViewById(R.id.progressExistingUser).setVisibility(View.VISIBLE);
                             findViewById(R.id.progressExistingImage).setVisibility(View.VISIBLE);
 
                             mExistingAccountTask = new ExistingAccountTask();
-                            mExistingAccountTask.execute(username, password);
+                            mExistingAccountTask.execute(xmppUserName, xmppPassword);
                         }
                     }
                     else

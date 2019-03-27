@@ -60,35 +60,32 @@ import com.squareup.okhttp.MediaType;
  * Created by tnnd on 7/5/18.
  */
 
-public class AccountManagerImpl implements AccountManager {
+public class DeepDatagoManagerImpl implements DeepDatagoManager {
     private static ContentResolver sContentResolver = null;
     private static java.io.File sFileDirectory = null;
 
     private KeyStore mKeyStore = null;
-    private String mCreationPassword = null;
     private NodeConfig mNodeConfig = new NodeConfig();
-    private Node mNode = null;
+    // private Node mNode = null;
     private CryptoManager mCryptoManager = null;
     private String mSymmetricKeyForAllFriends = null; // "63A78349DF7544768E0ECBCF3ACB6527";
     private final String mKeyStoreName = "keystore";
-    private final String mPublicKeyName = "account_rsa_public.pem"; // in mFileDir/keystore
-    private final String mPrivateKeyName = "account_rsa_private.pem"; // in mFileDir/keystore
     private final String mPublicServerAddress = "0xce66ae967e95f6f90defa8b58e6ab4a721c3c7fb"; // a server address, can be changed later
     private final String mGethNodeDir = ".eth1";
     private final int HTTP_REQUEST_TIMEOUT_IN_SECONDS = 10;
-    private static AccountManager msAccountManager = null;
+    private static DeepDatagoManager msDeepDatagoManager = null;
 
-    private AccountManagerImpl() {
+    private DeepDatagoManagerImpl() {
         if (sFileDirectory == null || sContentResolver == null)
             return;
 
         this.mKeyStore = new KeyStore(sFileDirectory + "/" + this.mKeyStoreName, Geth.LightScryptN, Geth.LightScryptP);
         // this.mCreationPassword = creationPassword;
-        this.mSymmetricKeyForAllFriends = getSharedAsymmetricKey();
+        this.mSymmetricKeyForAllFriends = getSharedKeyForAllFriends();
 
         this.mCryptoManager = CryptoManagerImpl.getInstance();
-
         this.mNodeConfig.setEthereumNetworkID(1);
+        /*
         BigInt chain = new BigInt(this.mNodeConfig.getEthereumNetworkID());
 
         try {
@@ -100,95 +97,137 @@ public class AccountManagerImpl implements AccountManager {
             // e.printStackTrace();
             // it is okay that the node is started before
         }
+        */
 
     }
 
-    public static AccountManager getInstance() {
-        if (msAccountManager == null) {
-            synchronized (AccountManagerImpl.class) {
-                if(msAccountManager == null) {
-                    msAccountManager = new AccountManagerImpl();
+    public static DeepDatagoManager getInstance() {
+        if (msDeepDatagoManager == null) {
+            synchronized (DeepDatagoManagerImpl.class) {
+                if(msDeepDatagoManager == null) {
+                    msDeepDatagoManager = new DeepDatagoManagerImpl();
                 }
             }
-            return msAccountManager;
+            return msDeepDatagoManager;
         }
-        return msAccountManager;
+        return msDeepDatagoManager;
     }
-
-    public static AccountManager getInstance(String password) {
-        AccountManager accountManage = AccountManagerImpl.getInstance();
+    /*
+    public static DeepDatagoManager getInstance(String password) {
+        DeepDatagoManager accountManage = DeepDatagoManagerImpl.getInstance();
         accountManage.saveAccountPassword(password);
         return accountManage;
     }
+    */
 
-    public Account createAccount() {
+    private Account getAccount() {
         // TODO Load mSymmetricKeyForAllFriends from database
-        Account newAccount = null;
         try {
+            Account account = null;
             Accounts accounts = this.mKeyStore.getAccounts();
             if (accounts.size() <= 0) {
-                if (this.mCreationPassword == null) {
-                    return null;
-                }
-                newAccount = this.mKeyStore.newAccount(this.mCreationPassword);
-                accounts = this.mKeyStore.getAccounts();
+                return null;
             }
-            newAccount = accounts.get(0);
+            account = accounts.get(0);
+            return account;
 
+            /*
             if (this.mCreationPassword != null) {
                 this.mKeyStore.unlock(newAccount, this.mCreationPassword);
             }
-
-            // String addressStr = newAccount.getAddress().getHex();
-            // System.out.println("debug acct hex: " + addressStr);
+            */
         } catch (Exception e) {
-            // e.printStackTrace();
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private Account createAccount(String password, KeyStore keyStore) {
+        if (password.length() == 0) {
             return null;
         }
-        return newAccount;
+
+        try {
+            Accounts accounts = keyStore.getAccounts();
+            if (accounts.size() <= 0) {
+                return this.mKeyStore.newAccount(password);
+            }
+            return getAccount();
+            /*
+            if (this.mCreationPassword != null) {
+                this.mKeyStore.unlock(newAccount, this.mCreationPassword);
+            }
+            */
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
-    public String getRegisterRequest(Account account, String userNickName) {
+
+    public String registerRequest(String password, String userNickName) {
         String transactionStr = null;
+        Account account = createAccount(password, this.mKeyStore);
+
+        getSharedKeyForAllFriends();
+
+        if (account == null) {
+            return null;
+        }
         try {
             // System.out.println("to_address: " + account.getAddress().getHex());
+            Node node = Geth.newNode(sFileDirectory + "/" + this.mGethNodeDir, this.mNodeConfig);
+            node.start();
 
-            String data = loadPublicKey();
+            String data = this.mCryptoManager.getPublicKeyString();
             // System.out.println("public key: " + data);
-            transactionStr = signTransaction(account, data.getBytes("UTF8"));
+            transactionStr = signTransaction(account, password, data.getBytes("UTF8"));
+            node.stop();
             // System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
             JSONObject requestNode = new JSONObject();
-            requestNode.put(Tags.SENDER_ADDRESS, account.getAddress().getHex());
 
-            String encryptedName = this.mCryptoManager.encryptDataWithSymmetricKey(this.mSymmetricKeyForAllFriends, userNickName);
-            // String decryptedName = decryptDataWithSymmetricKey(symmetricKeyForAllFriends, encryptedName);
-            // System.out.println("decrypted name: " + decryptedName);
+            String encryptedName = this.mCryptoManager.encryptStringWithSymmetricKey(this.mSymmetricKeyForAllFriends, userNickName);
+
             requestNode.put(Tags.NAME, encryptedName);
             requestNode.put(Tags.TRANSACTION, transactionStr);
-            transactionStr = requestNode.toString();
-            // System.out.println("register transaction: " + transactionStr);
-        } catch (Exception e) {
-            transactionStr = e.getMessage();
-            e.printStackTrace();
+            requestNode.put(Tags.SENDER_ADDRESS, account.getAddress().getHex());
 
+            String url = Tags.BASE_URL + Tags.ACCOUNT_REGISTER_API;
+            JSONObject response = sendPostRequestSync(url, requestNode);
+            if (response == null) {
+                // error occurred
+                return null;
+            }
+            String xmppUsername = response.getString(Tags.XMPP_ACCOUNT_NUMBER).toLowerCase() + "@" + Tags.BASE_SERVER_ADDRESS;
+            String xmppPassword = response.getString(Tags.XMPP_ACCOUNT_PASSWORD);
+
+            ContentValues accountValue = new ContentValues(2); // we only store user name and password
+            accountValue.put(Tags.DB_FIELD_XMPP_USER_NAME, xmppUsername);
+            accountValue.put(Tags.DB_FIELD_XMPP_PASSOWRD, xmppPassword);
+            sContentResolver.update(Tags.CRYPTO_ACCOUNT_URI, accountValue, "_ID=1", null);
+            return response.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return transactionStr;
+
+        return null;
     }
 
-    public String signTransaction(Account account, byte[] dataBytes) {
+    public String signTransaction(Account account, String password, byte[] dataBytes) {
         long nonce;
         double amount = 0;
         long gasLimit = 0;
         double gasPrice = 0;
+
+        if (account == null || password == null || dataBytes == null || dataBytes.length == 0) {
+            return null;
+        }
         BigInt chain = new BigInt(this.mNodeConfig.getEthereumNetworkID());
         String returnStr = null;
 
         try {
-            String accountPassword = getAccountPassword();
-            if (accountPassword == null) {
-                return null;
-            }
-            this.mKeyStore.unlock(account, accountPassword);
+            this.mKeyStore.unlock(account, password);
 
             // nonce = this.node.getEthereumClient().getPendingNonceAt(context, account.getAddress());
             nonce = 0;
@@ -208,7 +247,14 @@ public class AccountManagerImpl implements AccountManager {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
-
+        }
+        finally {
+            try {
+                this.mKeyStore.lock(account.getAddress());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         return returnStr;
@@ -219,16 +265,21 @@ public class AccountManagerImpl implements AccountManager {
         long unixTime = System.currentTimeMillis() / 1000L;
         String timeString = Long.toString(unixTime);
 
-        String transactionStr = b64EncryptedSignedBytes(timeString.getBytes());
-        if (transactionStr == null || transactionStr.length() == 0) {
+        // String transactionStr = b64EncryptedSignedBytes(timeString.getBytes());
+        String signedTimeString = this.mCryptoManager.signStrWithPrivateKey(timeString, true);
+        if (signedTimeString == null || signedTimeString.length() == 0) {
             return null;
         }
 
         String lURL = Tags.BASE_URL + Tags.REQUEST_SUMMARY_API;
 
+        if (requestAccount == null) {
+            requestAccount = getAccount().getAddress().getHex();
+        }
+
         lURL += Tags.TO_ADDRESS + "=" + requestAccount + "&";
         lURL += Tags.TIME_STAMP + "=" + timeString + "&";
-        lURL += Tags.ENCODED_SIGNATURE + "=" + transactionStr;
+        lURL += Tags.ENCODED_SIGNATURE + "=" + signedTimeString;
 
         JSONObject responseObject = sendGetRequestSync(lURL);
         if (responseObject == null) {
@@ -240,7 +291,8 @@ public class AccountManagerImpl implements AccountManager {
             if (friendReqArray.length() == 0) {
                 return null;
             }
-            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
 
             for (int i = 0; i < friendReqArray.length(); i++) {
                 JSONObject object = friendReqArray.getJSONObject(i);
@@ -251,9 +303,9 @@ public class AccountManagerImpl implements AccountManager {
                 JSONObject keyObject = new JSONObject(requestStr);
                 String friendAESKey = keyObject.getString(Tags.FRIEND_SYMMETRIC_KEY);
                 String allFriendsAESKey = keyObject.getString(Tags.ALL_FRIENDS_SYMMETRIC_KEY);
-                allFriendsAESKey = this.mCryptoManager.decryptTextBase64(privateKey, allFriendsAESKey.getBytes());
-                friendAESKey = this.mCryptoManager.decryptTextBase64(privateKey, friendAESKey.getBytes());
-                name = this.mCryptoManager.decryptDataWithSymmetricKey(allFriendsAESKey, name);
+                allFriendsAESKey = this.mCryptoManager.decryptStrWithPrivateKey(privateKey, allFriendsAESKey);
+                friendAESKey = this.mCryptoManager.decryptStrWithPrivateKey(privateKey, friendAESKey);
+                name = this.mCryptoManager.decryptStringWithSymmetricKey(allFriendsAESKey, name);
 
                 ContentValues accountValue = new ContentValues(3);
                 accountValue.put(Tags.DB_FIELD_PRIVATE_SYMMETRIC_KEY, friendAESKey);
@@ -296,12 +348,13 @@ public class AccountManagerImpl implements AccountManager {
         long unixTime = System.currentTimeMillis() / 1000L;
         String timeString = Long.toString(unixTime);
 
-        String transactionStr = b64EncryptedSignedBytes(timeString.getBytes());
-        if (transactionStr == null || transactionStr.length() == 0) {
+        // String transactionStr = b64EncryptedSignedBytes(timeString.getBytes());
+        String signedTimeString = this.mCryptoManager.signStrWithPrivateKey(timeString, true);
+        if (signedTimeString == null || signedTimeString.length() == 0) {
             return;
         }
 
-        Account account = createAccount();
+        Account account = getAccount();
         String fromAddress = account.getAddress().getHex();
 
 
@@ -310,7 +363,7 @@ public class AccountManagerImpl implements AccountManager {
         lURL += Tags.FROM_ADDRESS + "=" + fromAddress.toLowerCase() + "&";
         lURL += Tags.TO_ADDRESS + "=0x" + toAddress.toLowerCase() + "&"; // toAddess has 0x already
         lURL += Tags.TIME_STAMP + "=" + timeString + "&";
-        lURL += Tags.ENCODED_SIGNATURE + "=" + transactionStr;
+        lURL += Tags.ENCODED_SIGNATURE + "=" + signedTimeString;
 
         JSONObject responseObject = sendGetRequestSync(lURL);
         if (responseObject == null) {
@@ -325,8 +378,8 @@ public class AccountManagerImpl implements AccountManager {
 
             // String key = friendReqObject.getString("all_friends_symmetric_key");
 
-            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
-            String allFriendsAESKey = this.mCryptoManager.decryptTextBase64(privateKey, key.getBytes());
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
+            String allFriendsAESKey = this.mCryptoManager.decryptStrWithPrivateKey(privateKey, key);
             ContentValues accountValue = new ContentValues(2);
             accountValue.put(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY, allFriendsAESKey);
             accountValue.put(Tags.DB_FIELD_ACCOUNT, toAddress);
@@ -444,18 +497,14 @@ public class AccountManagerImpl implements AccountManager {
         return null;
     }
 
-    private String getPrivateKeyFileName() {
-        String privateKeyName = sFileDirectory + "/" + this.mKeyStoreName + "/" + this.mPrivateKeyName;
-        return privateKeyName;
-    }
-
+    /*
     private String loadPublicKey() {
         // check if mFileDir + /keystore + keyname exists
         String publicKeyName = sFileDirectory + "/" + this.mKeyStoreName + "/" + this.mPublicKeyName;
         File publicKeyFile = new File(publicKeyName);
         if (! publicKeyFile.exists()) {
             String privateKeyName = sFileDirectory + "/" + this.mKeyStoreName + "/" + this.mPrivateKeyName;
-            this.mCryptoManager.generateKeyCertificate(privateKeyName, publicKeyName, null);
+            this.mCryptoManager.generateKeyPair(privateKeyName, publicKeyName, null);
         }
         String publicKeyContent = null;
         try {
@@ -487,8 +536,9 @@ public class AccountManagerImpl implements AccountManager {
         reader.close();
         return sb.toString();
     }
+    */
 
-    public String getSharedAsymmetricKey()
+    public String getSharedKeyForAllFriends()
     {
         if (sContentResolver == null) {
             return null;
@@ -526,9 +576,10 @@ public class AccountManagerImpl implements AccountManager {
         }
         sContentResolver = iContentResolver;
         sFileDirectory = iFileDirectory;
-        AccountManagerImpl.getInstance();
+        CryptoManagerImpl.initStaticMembers(iFileDirectory);
+        DeepDatagoManagerImpl.getInstance();
     }
-
+    /*
     public void saveAccountPassword(String password) {
         if (sContentResolver == null) {
             return;
@@ -552,8 +603,8 @@ public class AccountManagerImpl implements AccountManager {
         }
 
     }
-
-    public String getSharedKey(String friendId)
+    */
+    public String getAllFriendsKey(String friendId)
     {
         JSONObject keysObj = getFriendKeys(friendId);
         try {
@@ -637,7 +688,7 @@ public class AccountManagerImpl implements AccountManager {
         String transactionStr = null;
         try {
             Signature sig = Signature.getInstance("SHA256withRSA");
-            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
 
             sig.initSign(privateKey);
             sig.update(inputBytes);
@@ -718,38 +769,40 @@ public class AccountManagerImpl implements AccountManager {
         //   "action_type": 0, // or 1 to approve
         //   "to_address": "0x<to_address>",
         //   "from_address": "0x<from_address>"
-        //   "request": "signed transaction string"
-        // }
-        // where "signed transaction string" has input structure:
-        // {
-        //   "friend_request_symmetric_key": "<public_key_encrypted symmetric key>",
+        //   "keys": "{
+        //      "friend_request_symmetric_key": "<public_key_encrypted symmetric key>",
         //        Note: this field is optional if to approve a friend request, as this is already exchanged
-        //   "all_friends_symmetric_key": "<public_key_encrypted symmetric key>",
+        //      "all_friends_symmetric_key": "<public_key_encrypted symmetric key>",
         //        Note: this public key is always using the one for to_address' public key
+        //    }"
         // }
 
         try  {
             //Your code goes here
             PublicKey publicKey = getPublicKey(toAccount);
             CryptoManager cryptoManager = CryptoManagerImpl.getInstance();
-            // String encryptedStr = cryptoManager.encryptTextBase64(publicKey, "abc".getBytes());
-            // System.out.print(encryptedStr);
 
-            JSONObject signedRequestNode = new JSONObject();
+            JSONObject kyesNode = new JSONObject();
             if (requestType == Tags.FriendRequest) {
                 String privateFriendSymmetricKey = getSymmetricKey(toAccount);
                 if (privateFriendSymmetricKey == null) {
                     return;
                 }
-                signedRequestNode.put(Tags.FRIEND_SYMMETRIC_KEY, cryptoManager.encryptTextBase64(publicKey, privateFriendSymmetricKey.getBytes()));
+                kyesNode.put(Tags.FRIEND_SYMMETRIC_KEY, cryptoManager.encryptStrWithPublicKey(publicKey, privateFriendSymmetricKey));
             }
-            String allFriendsSharedKey = getSharedAsymmetricKey();
-            String encryptedAllFriendsKey = cryptoManager.encryptTextBase64(publicKey, allFriendsSharedKey.getBytes());
-            signedRequestNode.put(Tags.ALL_FRIENDS_SYMMETRIC_KEY, encryptedAllFriendsKey); // need to encrypt by public key
-            // AccountManager accountManager = AccountManagerImpl.getInstance();
-            Account account = createAccount();
+            String allFriendsSharedKey = getSharedKeyForAllFriends();
+            String encryptedAllFriendsKey = cryptoManager.encryptStrWithPublicKey(publicKey, allFriendsSharedKey);
+            kyesNode.put(Tags.ALL_FRIENDS_SYMMETRIC_KEY, encryptedAllFriendsKey); // need to encrypt by public key
+            // DeepDatagoManager DeepDatagoManager = DeepDatagoManagerImpl.getInstance();
+            Account account = getAccount();
             String addressStr = account.getAddress().getHex();
-            String transactionStr = signTransaction(account, signedRequestNode.toString().getBytes("UTF8"));
+            // String transactionStr = signTransaction(account, null, signedRequestNode.toString().getBytes("UTF8"));
+            long unixTime = System.currentTimeMillis() / 1000L;
+            String timeString = Long.toString(unixTime);
+
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
+
+            String signedTimeString = this.mCryptoManager.signStrWithPrivateKey(timeString, false);
 
             JSONObject requestNode = new JSONObject();
             requestNode.put(Tags.ACTION_TYPE, requestType);
@@ -762,7 +815,10 @@ public class AccountManagerImpl implements AccountManager {
                 requestNode.put(Tags.TO_ADDRESS, addressStr);
                 requestNode.put(Tags.FROM_ADDRESS, "0x" + toAccount);
             }
-            requestNode.put(Tags.REQUEST, transactionStr);
+            // requestNode.put(Tags.REQUEST, transactionStr);
+            requestNode.put(Tags.TIME_STAMP, timeString);
+            requestNode.put(Tags.ENCODED_SIGNATURE, signedTimeString);
+            requestNode.put(Tags.KEYS, kyesNode.toString());
 
             String lURL = Tags.BASE_URL + Tags.FRIEND_REQUEST_API;
 
@@ -777,7 +833,7 @@ public class AccountManagerImpl implements AccountManager {
     }
 
     public boolean createGroupChat(String groupAddress, ArrayList<String> invitees) {
-        Account account = createAccount();
+        Account account = getAccount();
         // String transactionStr = null;
         try {
             // System.out.println("from_address: " + account.getAddress().getHex());
@@ -786,12 +842,11 @@ public class AccountManagerImpl implements AccountManager {
             long unixTime = System.currentTimeMillis() / 1000L;
             String timeString = Long.toString(unixTime);
 
-            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
 
-            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString, false);
+            String signedTimeString = this.mCryptoManager.signStrWithPrivateKey(timeString, false);
 
             // System.out.println("public key: " + data);
-            // transactionStr = signTransaction(account, signedTimeString.getBytes("UTF8"));
             // System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
             JSONObject requestNode = new JSONObject();
             requestNode.put(Tags.FROM_ADDRESS, account.getAddress().getHex());
@@ -807,8 +862,8 @@ public class AccountManagerImpl implements AccountManager {
             for (int i = 0; i < invitees.size(); ++i) {
                 String inviteeAddress = invitees.get(i);
                 inviteeAddress = getBlockChainIDFromAddress(inviteeAddress);
-                String friendSharedSymmetricKey = getSharedKey(inviteeAddress);
-                String encryptedGroupKey = mCryptoManager.encryptDataWithSymmetricKey(friendSharedSymmetricKey, groupKey);
+                String friendSharedSymmetricKey = getAllFriendsKey(inviteeAddress);
+                String encryptedGroupKey = mCryptoManager.encryptStringWithSymmetricKey(friendSharedSymmetricKey, groupKey);
                 inviteeDict.put(inviteeAddress, encryptedGroupKey);
             }
 
@@ -872,15 +927,15 @@ public class AccountManagerImpl implements AccountManager {
 
     public boolean getGroupKeyFromServer(String groupAddress) {
         String address = getBlockChainIDFromAddress(groupAddress);
-        Account account = createAccount();
+        Account account = getAccount();
         try {
             // replace data by public key
             long unixTime = System.currentTimeMillis() / 1000L;
             String timeString = Long.toString(unixTime);
 
-            PrivateKey privateKey = this.mCryptoManager.loadPrivateKeyFromRSAPEM(getPrivateKeyFileName());
+            PrivateKey privateKey = this.mCryptoManager.getPrivateKey();
 
-            String signedTimeString = this.mCryptoManager.signStringByPrivateKey(privateKey, timeString, true);
+            String signedTimeString = this.mCryptoManager.signStrWithPrivateKey(timeString, true);
 
             String lURL = Tags.BASE_URL + Tags.REQUEST_INVITE_API;
 
@@ -895,7 +950,7 @@ public class AccountManagerImpl implements AccountManager {
             }
             System.out.println(response.toString());
             String encryptedGroupKey = response.getString(Tags.GROUP_KEY);
-            String groupKey = this.mCryptoManager.decryptDataWithSymmetricKey(getSharedAsymmetricKey(), encryptedGroupKey);
+            String groupKey = this.mCryptoManager.decryptStringWithSymmetricKey(getSharedKeyForAllFriends(), encryptedGroupKey);
 
             updateGroupKey(address, groupKey);
 

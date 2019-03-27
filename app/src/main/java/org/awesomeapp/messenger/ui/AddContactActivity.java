@@ -48,7 +48,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.DeepDatagoManagerImpl;
 import com.deepdatago.account.Tags;
 
 import org.awesomeapp.messenger.ImApp;
@@ -132,7 +132,7 @@ public class AddContactActivity extends BaseActivity {
                                 if (pattern.matcher(address).matches()) {
                                     try {
                                         String[] addressArray = address.split("\\@");
-                                        com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                                        com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                                         accountManager.friendRequestSync(addressArray[0], Tags.FriendRequest);
                                     }
                                     catch (Exception e) {

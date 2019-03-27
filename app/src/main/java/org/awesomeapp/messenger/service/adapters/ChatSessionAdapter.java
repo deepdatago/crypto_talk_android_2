@@ -78,20 +78,17 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.provider.BaseColumns;
-import android.provider.ContactsContract;
 import android.provider.OpenableColumns;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
-import android.webkit.URLUtil;
 
-import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.DeepDatagoManagerImpl;
 import com.deepdatago.account.Tags;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
@@ -621,7 +618,7 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                     // encrypt inputstream "fis"
                     // Log.e(TAG,"sendFileName: " + sendFileName + " and mediaPath: " + mediaPath);
                     String address = mChatSession.getParticipant().getAddress().getUser();
-                    com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                    com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                     String symmetricKey = null;
                     if (isGroupChat) {
                         symmetricKey = accountManager.getGroupKey(address);
@@ -630,7 +627,7 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
                         symmetricKey = accountManager.getSymmetricKey(address);
                     }
 
-                    InputStream cipherStream = mCryptoManager.encryptInputStreamWithSymmetricKey(symmetricKey, fis);
+                    InputStream cipherStream = mCryptoManager.encryptDataWithSymmetricKey(symmetricKey, fis);
                     // [CRYPTO_TALK] end
                     int cipherStreamLength = 0;
                     try {
@@ -1181,19 +1178,17 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
             // [CRYTO_TALK] add message decryption
             if (body != null)
             {
-                com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+                com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                 String remoteAddressID = bareUsername.split("@")[0];
-                JSONObject keys = accountManager.getFriendKeys(remoteAddressID);
-                String privateAsymmetricKey = "";
                 String oldBody = body;
                 if (mIsGroupChat) {
-                    privateAsymmetricKey = accountManager.getGroupKey(remoteAddressID);
-                    body = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                    String privateSymmetricKey = accountManager.getGroupKey(remoteAddressID);
+                    body = mCryptoManager.decryptStringWithSymmetricKey(privateSymmetricKey, body);
                 }
-                else if (keys != null) {
+                else {
                     try {
-                        privateAsymmetricKey = keys.getString(Tags.FRIEND_SYMMETRIC_KEY);
-                        body = mCryptoManager.decryptDataWithSymmetricKey(privateAsymmetricKey, body);
+                        String privateSymmetricKey = accountManager.getSymmetricKey(remoteAddressID);
+                        body = mCryptoManager.decryptStringWithSymmetricKey(privateSymmetricKey, body);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -2059,7 +2054,7 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         try {
             // [CRYPTO_TALK] get symmetricKey based on recipient address
             String address = mChatSession.getParticipant().getAddress().getUser();
-            com.deepdatago.account.AccountManager accountManager = AccountManagerImpl.getInstance();
+            com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
             String symmetricKey = accountManager.getSymmetricKey(address);
             if (mIsGroupChat) {
                 symmetricKey = accountManager.getGroupKey(address);

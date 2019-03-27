@@ -13,23 +13,15 @@ import java.util.ArrayList;
  * Created by tnnd on 7/5/18.
  */
 
-public interface AccountManager {
-    /**
-     * Generate PrivateKey and Certificate
-     *
-     * @param
-     * @return      org.ethereum.geth.Account
-     */
-    public Account createAccount();
-
+public interface DeepDatagoManager {
     /**
      * Generate Register request
      *
-     * @param   account: ethereum account
+     * @param   password: ethereum account password
      * @param   userNickName: user name that wants to be displayed to friends.  This name will be encrypted so server does not know
      * @return      RegisterRequest JSON string
      */
-    public String getRegisterRequest(Account account, String userNickName);
+    public String registerRequest(String password, String userNickName);
 
 
     /**
@@ -64,17 +56,18 @@ public interface AccountManager {
      * Generate signed transaction
      *
      * @param   account: ethereum account
+     * @param   password: ethereum account password to sign transaction
      * @param   dataBytes: transaction data to be signed
      * @return      signed JSON string for transaction
      */
-    public String signTransaction(Account account, byte[] dataBytes);
+    public String signTransaction(Account account, String password, byte[] dataBytes);
 
     /**
      * generate shared key for all friends
      *
-     * @return      Shared assymmetric key for all friends
+     * @return      Shared symmetric key for all friends
      */
-    public String getSharedAsymmetricKey();
+    public String getSharedKeyForAllFriends();
 
     /**
      * get private chat symmetric key for a given friendId
@@ -88,23 +81,8 @@ public interface AccountManager {
      *
      * @return      shared key for the given friendId
      */
-    public String getSharedKey(String friendId);
+    public String getAllFriendsKey(String friendId);
 
-    /**
-     * Save account password
-     *
-     * @param   password: for account
-     * @return      Shared assymmetric key for all friends
-     */
-    public void saveAccountPassword(String password);
-
-    /**
-     * Get keys by its account address
-     *
-     * @param   account: account name for the friend/contact
-     * @return      JSON object that has all keys info
-     */
-    public JSONObject getFriendKeys(String account);
 
     /**
      * get public key

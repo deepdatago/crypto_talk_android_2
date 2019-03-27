@@ -35,12 +35,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
-import android.os.IInterface;
-import android.os.Parcel;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TabLayout;
@@ -50,11 +47,8 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
-import android.text.util.Rfc822Token;
-import android.text.util.Rfc822Tokenizer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -66,11 +60,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.deepdatago.account.AccountManager;
-import com.deepdatago.account.AccountManagerImpl;
+import com.deepdatago.account.DeepDatagoManager;
+import com.deepdatago.account.DeepDatagoManagerImpl;
 import com.deepdatago.account.Tags;
-import com.deepdatago.crypto.CryptoManager;
-import com.deepdatago.crypto.CryptoManagerImpl;
 import com.github.javiersantos.appupdater.AppUpdater;
 import com.github.javiersantos.appupdater.enums.Display;
 import com.github.javiersantos.appupdater.enums.UpdateFrom;
@@ -78,7 +70,6 @@ import com.github.javiersantos.appupdater.enums.UpdateFrom;
 import org.awesomeapp.messenger.model.Contact;
 import org.awesomeapp.messenger.model.ImConnection;
 import org.awesomeapp.messenger.model.ImErrorInfo;
-import org.awesomeapp.messenger.model.Presence;
 import org.awesomeapp.messenger.plugin.xmpp.XmppAddress;
 import org.awesomeapp.messenger.provider.Imps;
 import org.awesomeapp.messenger.service.IChatSession;
@@ -99,7 +90,6 @@ import org.awesomeapp.messenger.ui.ConversationListFragment;
 import org.awesomeapp.messenger.ui.LockScreenActivity;
 import org.awesomeapp.messenger.ui.MoreFragment;
 import org.awesomeapp.messenger.ui.legacy.SettingActivity;
-import org.awesomeapp.messenger.ui.onboarding.OnboardingActivity;
 import org.awesomeapp.messenger.ui.onboarding.OnboardingManager;
 import org.awesomeapp.messenger.util.AssetUtil;
 import org.awesomeapp.messenger.util.SecureMediaStore;
@@ -108,7 +98,6 @@ import org.awesomeapp.messenger.util.XmppUriHelper;
 import org.ironrabbit.type.CustomTypefaceManager;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -117,7 +106,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import im.zom.messenger.R;
 import info.guardianproject.iocipher.VirtualFileSystem;
@@ -152,7 +140,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         super.onCreate(savedInstanceState);
 
         // [CRYPTO_TALK] set content resolver
-        AccountManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
+        DeepDatagoManagerImpl.initStaticMembers(getContentResolver(), getFilesDir());
 
         if (Preferences.doBlockScreenshots()) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,
@@ -1013,7 +1001,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                 String server = params[1];
 
                 // [CRYPTO_TALK] register group info
-                AccountManager accountManager = AccountManagerImpl.getInstance();
+                DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
                 accountManager.createGroupChat(chatRoom, invitees);
                 // [CRYPTO_TALK] END register group info
 

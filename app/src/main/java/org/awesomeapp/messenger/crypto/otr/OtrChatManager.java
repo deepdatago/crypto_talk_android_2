@@ -12,13 +12,11 @@ import org.awesomeapp.messenger.service.ImServiceConstants;
 import org.awesomeapp.messenger.service.RemoteImService;
 import org.awesomeapp.messenger.util.Debug;
 
-import java.io.UnsupportedEncodingException;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -40,11 +38,8 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.deepdatago.account.AccountManagerImpl;
-import com.deepdatago.account.Tags;
 import com.deepdatago.crypto.CryptoManager;
 import com.deepdatago.crypto.CryptoManagerImpl;
-import org.json.JSONObject;
 
 /*
  * OtrChatManager keeps track of the status of chats and their OTR stuff
@@ -61,7 +56,6 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
 
     private Context mContext;
     private ImApp mApp;
-    private CryptoManager mCryptoManager;
 
     private final static String TAG = "OtrChatManager";
 
@@ -82,8 +76,6 @@ public class OtrChatManager implements OtrEngineListener, OtrSmEngineHost {
 
 
         mApp = ((ImApp)mContext.getApplicationContext());
-        mCryptoManager = new CryptoManagerImpl();
-
     }
 
     public static synchronized OtrChatManager getInstance(int otrPolicy, RemoteImService imService, OtrAndroidKeyManagerImpl otrKeyManager)
