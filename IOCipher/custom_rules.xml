@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="custom_rules">
+
+<!-- find the Android NDK path -->
+  <exec executable="which" outputproperty="which.ndk.build">
+    <arg value="ndk-build"/>
+  </exec>
+  <exec executable="dirname" outputproperty="ndk.build.dir">
+    <arg value="${which.ndk.build}"/>
+  </exec>
+  <condition property="set.ndk.dir" value="${env.ANDROID_NDK_HOME}" else="${ndk.build.dir}">
+    <isset property="env.ANDROID_NDK_HOME" />
+  </condition>
+  <condition property="ndk.dir" value="${set.ndk.dir}">
+    <not>
+      <isset property="ndk.dir" />
+    </not>
+  </condition>
+  <fail message="Cannot find Android NDK! Either set ANDROID_NDK_HOME or make sure ndk-build is in your PATH.">
+    <condition>
+      <or>
+        <not>
+          <isset property="ndk.dir"/>
+        </not>
+        <equals arg1="${ndk.dir}" arg2=""/>
+        <equals arg1="${ndk.dir}" arg2="."/>
+      </or>
+    </condition>
+  </fail>
+
+  <property name="java.source" value="1.6" />
+  <property name="java.target" value="1.6" />
+
+  <target name="javadoc" description="Generate Javadocs">
+    <javadoc sourcepath="${source.dir}"
+             destdir="${out.dir}/javadoc"
+             packagenames="info.guardianproject.iocipher.*"
+             additionalparam="-notimestamp"
+             windowtitle="${ant.project.name}"
+             doctitle="${ant.project.name}" />
+  </target>
+
+  <target name="-pre-build">
+    <exec executable="make" failonerror="true">
+      <arg value="-C" />
+      <arg value="external" />
+    </exec>
+    <exec executable="${ndk.dir}/ndk-build" failonerror="true">
+      <arg value="-j8" />
+    </exec>
+  </target>
+
+  <target name="-pre-clean">
+    <exec executable="make" failonerror="true">
+      <arg value="-C" />
+      <arg value="external" />
+      <arg value="clean" />
+    </exec>
+    <exec executable="${ndk.dir}/ndk-build" failonerror="true">
+      <arg value="-j8" />
+      <arg value="clean" />
+    </exec>
+    <delete>
+      <fileset dir=".">
+        <include name="IOCipher*-*.zip" />
+        <include name="IOCipher*-*.zip.asc" />
+        <include name="IOCipher*-*.aar" />
+        <include name="IOCipher*-*.aar.asc" />
+        <include name="IOCipher*-*.pom" />
+        <include name="IOCipher*-*.pom.asc" />
+      </fileset>
+    </delete>
+  </target>
+
+  <target name="-getgitdetails" >
+    <exec executable="git" outputproperty="git.describe">
+      <arg value="describe"/>
+    </exec>
+    <exec executable="git" outputproperty="git.revision">
+      <arg value="rev-parse"/>
+      <arg value="HEAD"/>
+    </exec>
+  </target>
+
+  <target name="-post-build" depends="-getgitdetails">
+    <property name="jar.dir" value="libs" />
+    <condition property="build.is.debug" value="true" else="false">
+      <equals arg1="${build.target}" arg2="debug" />
+    </condition>
+    <if condition="${build.is.debug}">
+      <then>
+        <property name="jar.name" value="${jar.dir}/${ant.project.name}-${git.describe}-debug.jar" />
+        <property name="zip.name" value="${ant.project.name}-${git.describe}-debug.zip" />
+        <property name="aar.name" value="${ant.project.name}-${git.describe}-debug.aar" />
+        <property name="pom.name" value="${ant.project.name}-${git.describe}-debug.pom" />
+        <property name="aar.standalone.name" value="${ant.project.name}Standalone-${git.describe}-debug.aar" />
+        <property name="pom.standalone.name" value="${ant.project.name}Standalone-${git.describe}-debug.pom" />
+      </then>
+      <else>
+        <property name="jar.name" value="${jar.dir}/${ant.project.name}-${git.describe}.jar" />
+        <property name="zip.name" value="${ant.project.name}-${git.describe}.zip" />
+        <property name="aar.name" value="${ant.project.name}-${git.describe}.aar" />
+        <property name="pom.name" value="${ant.project.name}-${git.describe}.pom" />
+        <property name="aar.standalone.name" value="${ant.project.name}Standalone-${git.describe}.aar" />
+        <property name="pom.standalone.name" value="${ant.project.name}Standalone-${git.describe}.pom" />
+      </else>
+    </if>
+    <property file="${sdk.dir}/tools/source.properties" />
+    <exec executable="cat" outputproperty="ndk.release">
+      <arg value="${ndk.dir}/RELEASE.TXT"/>
+    </exec>
+    <delete file="${jar.name}"/>
+    <mkdir dir="${jar.dir}" />
+    <jar destfile="${jar.name}"
+         includes="info/**"
+         basedir="${out.classes.absolute.dir}">
+      <manifest>
+        <attribute name="Implementation-Vendor" value="Guardian Project"/>
+        <attribute name="Implementation-Title" value="IOCipher"/>
+        <attribute name="Implementation-URL" value="https://dev.guardianproject.info/projects/iocipher"/>
+        <attribute name="Implementation-Version" value="${git.describe}"/>
+        <attribute name="Git-Revision" value="${git.revision}"/>
+        <attribute name="Android-SDK-Release" value="${Pkg.Revision}"/>
+        <attribute name="Android-SDK-Host-OS" value="${Archive.HostOs}"/>
+        <attribute name="Android-NDK-Release" value="${ndk.release}"/>
+      </manifest>
+    </jar>
+    <delete file="${zip.name}"/>
+    <delete file="${zip.name}.asc"/>
+    <zip destfile="${zip.name}" level="9">
+      <zipfileset dir="libs" />
+    </zip>
+    <!-- AARs require R.txt and res/ even if they are empty -->
+    <delete file="R.txt"/>
+    <touch file="R.txt"/>
+    <!-- reset timestamp for reproducibility -->
+    <touch>
+      <fileset file="AndroidManifest.xml"/>
+      <fileset file="bin/classes.jar"/>
+      <fileset dir="res"/>
+      <fileset dir="libs"/>
+    </touch>
+    <!-- AAR for use with SQLCipher-for-Android -->
+    <zip destfile="${aar.name}" level="9">
+      <zipfileset dir="." includes="AndroidManifest.xml"/>
+      <zipfileset dir="bin" includes="classes.jar"/>
+      <zipfileset dir="." includes="R.txt"/>
+      <zipfileset dir="res" excludes=".README" prefix="res"/>
+      <zipfileset dir="libs" includes="**/libiocipher.so **/sqlfs*" prefix="jni"/>
+    </zip>
+    <!-- AAR that includes the SQLCipher shared libraries -->
+    <zip destfile="${aar.standalone.name}" level="9">
+      <zipfileset dir="." includes="AndroidManifest.xml"/>
+      <zipfileset dir="bin" includes="classes.jar"/>
+      <zipfileset dir="." includes="R.txt"/>
+      <zipfileset dir="res" excludes=".README" prefix="res"/>
+      <zipfileset dir="libs" includes="**/*.so **/sqlfs*" prefix="jni"/>
+    </zip>
+    <!-- generate .pom for maven repos -->
+    <copy file="IOCipher.pom" tofile="${pom.name}"/>
+    <replaceregexp file="${pom.name}"
+                   match="VERSION"
+                   replace="${git.describe}"
+                   flags="m"/>
+    <copy file="${pom.name}" tofile="${pom.standalone.name}"/>
+    <replaceregexp file="${pom.standalone.name}"
+                   match="IOCipher&lt;"
+                   replace="IOCipherStandalone"
+                   flags="m"/>
+    <!-- don't leave this jar in libs/ since it confuses Eclipse -->
+    <delete file="${jar.name}"/>
+    <delete file="${release.jar.name}"/>
+    <if condition="${build.is.debug}">
+      <else>
+        <exec executable="gpg">
+          <arg value="--armor" />
+          <arg value="--detach-sign" />
+          <arg value="${zip.name}" />
+        </exec>
+        <exec executable="gpg">
+          <arg value="--armor" />
+          <arg value="--detach-sign" />
+          <arg value="${aar.name}" />
+        </exec>
+        <exec executable="gpg">
+          <arg value="--armor" />
+          <arg value="--detach-sign" />
+          <arg value="${pom.name}" />
+        </exec>
+        <exec executable="gpg">
+          <arg value="--armor" />
+          <arg value="--detach-sign" />
+          <arg value="${aar.standalone.name}" />
+        </exec>
+        <exec executable="gpg">
+          <arg value="--armor" />
+          <arg value="--detach-sign" />
+          <arg value="${pom.standalone.name}" />
+        </exec>
+      </else>
+    </if>
+  </target>
+
+</project>

@@ -107,11 +107,10 @@ ext {
     smackOmemoVersion="4.2.3"
 }
 
-
-
 dependencies {
     implementation fileTree(include: '*.jar', dir: 'libs')
     implementation project(':otr4jandroid')
+    implementation project(':IOCipher')
   //  implementation 'com.github.otr4j:otr4j:aac20b11de'
     implementation project(':tibetanTextLibrary')
     implementation project.ext.appcompat
@@ -120,12 +119,12 @@ dependencies {
     implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support:support-v4:27.1.1'
     implementation 'com.android.support:exifinterface:27.1.1'
-    implementation 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
+    implementation 'net.zetetic:android-database-sqlcipher:3.5.7@aar'
     implementation 'com.google.zxing:core:3.3.0'
     implementation 'commons-codec:commons-codec:1.9'
     implementation 'commons-io:commons-io:2.4'
     implementation 'org.thoughtcrime.ssl.pinning:AndroidPinning:1.0.0'
-    implementation 'info.guardianproject.iocipher:IOCipher:0.4'
+    // implementation 'info.guardianproject.iocipher:IOCipher:0.4'
     implementation 'info.guardianproject.netcipher:netcipher:2.0.0-alpha1'
     implementation 'info.guardianproject.netcipher:netcipher-httpclient:2.0.0-alpha1'
     implementation 'info.guardianproject.panic:panic:0.5'

@@ -1,0 +1,39 @@
+bin/
+gen/
+/libs/
+obj/
+external/*/libs
+external/*/obj
+external/libsqlfs-build-stamp
+jni/TAGS
+# Mac OS X detritus
+.DS_Store
+# products of "android create project" or "android update project"
+build.xml
+ant.properties
+local.properties
+proguard.cfg
+proguard-project.txt
+*~
+.settings
+#kdevelop files
+*.kdev4
+
+# release files
+R.txt
+IOCipher*-*.zip
+IOCipher*-*.zip.asc
+IOCipher*-*.aar
+IOCipher*-*.aar.asc
+IOCipher*-*.pom
+IOCipher*-*.pom.asc
+
+# gradle build products
+.gradle
+build/
+gradle.properties
+
+# Android Studio files
+.idea/
+*.iml
+.externalNativeBuild/

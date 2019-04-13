@@ -1,0 +1,106 @@
+buildscript {
+    repositories {
+        jcenter()
+        google()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.2'
+    }
+}
+
+allprojects {
+    repositories {
+        jcenter()
+        google()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+dependencies {
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'com.android.support:support-annotations:25.1.0'
+    androidTestCompile 'com.android.support.test:runner:0.5'
+    androidTestCompile 'com.android.support.test:rules:0.5'
+    androidTestCompile 'net.zetetic:android-database-sqlcipher:3.5.4@aar'
+}
+
+android {
+    compileSdkVersion 25
+    buildToolsVersion "27.0.3"
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 25
+        ndk.abiFilters 'armeabi-v7a', 'x86', 'x86_64', 'arm64-v8a'
+        testApplicationId "info.guardianproject.iocipher.tests"
+        testInstrumentationRunner 'android.support.test.runner.AndroidJUnitRunner'
+        testHandleProfiling true
+        testFunctionalTest true
+    }
+
+    // both libs/ and 'net.zetetic:android-database-sqlcipher:3.5.4@aar' contain these:
+    packagingOptions {
+        /*
+        pickFirst 'lib/armeabi-v7a/libsqlcipher.so'
+        pickFirst 'lib/x86/libsqlcipher.so'
+        pickFirst 'lib/x86_64/libsqlcipher.so'
+        */
+        exclude 'lib/armeabi-v7a/libsqlcipher.so'
+        exclude 'lib/x86/libsqlcipher.so'
+        exclude 'lib/x86_64/libsqlcipher.so'
+        exclude 'lib/arm64-v8a/libsqlcipher.so'
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+        }
+
+        androidTest {
+            manifest.srcFile 'androidTest/AndroidManifest.xml'
+            java.srcDirs = ['androidTest/src']
+            resources.srcDirs = ['androidTest/src']
+            aidl.srcDirs = ['androidTest/src']
+            renderscript.srcDirs = ['androidTest/src']
+            res.srcDirs = ['androidTest/res']
+            assets.srcDirs = ['androidTest/assets']
+        }
+    }
+
+    // before working here, run this in terminal: `make -C external`
+    externalNativeBuild {
+        ndkBuild {
+            path 'jni/Android.mk'
+        }
+    }
+
+    task makeExternal(type: Exec) {
+        commandLine 'make', '-C', file('external').absolutePath
+    }
+
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn makeExternal
+    }
+
+    task makeExternalClean(type: Exec) {
+        commandLine 'make', '-C', file('external').absolutePath, 'clean'
+    }
+
+    lintOptions {
+        abortOnError true
+
+        htmlReport false
+        xmlReport false
+        textReport true
+
+        error 'AppCompatMethod', 'NestedScrolling', 'StringFormatCount', 'UnsafeProtectedBroadcastReceiver'
+    }
+}
