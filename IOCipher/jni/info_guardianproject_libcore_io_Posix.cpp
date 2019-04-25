@@ -348,6 +348,19 @@ static jint Posix_preadBytes(JNIEnv* env, jobject, jobject javaFd, jobject javaB
     }
 }
 
+// [CRYPTO_TALK] worked around Low-address null pointer dereference when calling libsqlfs/sqlfs.c
+// https://source.android.com/devices/tech/debug/native-crash.
+int sqlfs_proc_write_debug(sqlfs_t *sqlfs, const char *path, const char *buf, size_t size, off_t offset,
+                           struct fuse_file_info *fi)
+{
+    return sqlfs_proc_write(sqlfs,
+                            path, // path.c_str(),
+                            buf, // reinterpret_cast<const char*>(bytes.get() + byteOffset),
+                            size, // byteCount,
+                            offset, // offset,
+                            fi);
+}
+
 static jint Posix_pwriteBytes(JNIEnv* env, jobject, jobject javaFd, jbyteArray javaBytes, jint byteOffset, jint byteCount, jlong offset, jint flags) {
     ScopedBytesRO bytes(env, javaBytes);
     if (bytes.get() == NULL) {
@@ -357,7 +370,7 @@ static jint Posix_pwriteBytes(JNIEnv* env, jobject, jobject javaFd, jbyteArray j
     ScopedUtfChars path(env, javaPath);
     struct fuse_file_info ffi;
     ffi.flags = flags;
-    int result = sqlfs_proc_write(0,
+    int result = sqlfs_proc_write_debug(0,
                                   path.c_str(),
                                   reinterpret_cast<const char*>(bytes.get() + byteOffset),
                                   byteCount,
