@@ -19,6 +19,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import android.app.Activity;
 import android.content.ContentResolver;
@@ -35,6 +37,9 @@ import android.util.Base64;
 import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
+
+import com.deepdatago.crypto.CryptoManager;
+import com.deepdatago.crypto.CryptoManagerImpl;
 
 public class OnboardingManager {
 
@@ -477,6 +482,25 @@ public class OnboardingManager {
         public boolean isMigration = false;
         public String fingerprint;
         public String nickname;
+    }
+
+    private static final Pattern VALID_EMAIL_ADDRESS_REGEX =
+            Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$", Pattern.CASE_INSENSITIVE);
+
+    public static boolean validateCryptoAddress(String emailStr) {
+        // from https://stackoverflow.com/questions/8204680/java-regex-email
+        Matcher matcher = VALID_EMAIL_ADDRESS_REGEX .matcher(emailStr);
+        if (matcher.find() == false) {
+            return false;
+        }
+        String[] address = emailStr.split("@");
+        if (address[0].length() != 40) {
+            return false;
+        }
+        if (address[1].equals(com.deepdatago.account.Tags.BASE_SERVER_ADDRESS) == false) {
+            return false;
+        }
+        return true;
     }
 
 }

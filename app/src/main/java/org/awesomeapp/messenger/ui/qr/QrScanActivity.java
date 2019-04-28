@@ -179,7 +179,6 @@ implements QrCodeDecoder.ResultCallback {
 		}
 	}
 
-
 	public void handleResult(final Result result) {
 		runOnUiThread(new Runnable() {
 			public void run() {
@@ -193,14 +192,15 @@ implements QrCodeDecoder.ResultCallback {
                     resultStrings.add(resultString);
                     dataResult.putStringArrayListExtra("result", resultStrings);
 
-                    OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultString);
+					// [CRYPTO_TALK] validate QR code and then go back
+                    // OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultString);
+					if (OnboardingManager.validateCryptoAddress(resultString) == false) {
+						return;
+					}
 
 					String message = null;
 
-                    if (diLink != null) {
-
-						message = getString(R.string.add_contact_success,diLink.username);
-                    }
+					message = getString(R.string.add_contact_success,resultString);
 
 					if (message != null)
 					{
@@ -208,7 +208,10 @@ implements QrCodeDecoder.ResultCallback {
 					}
 
                     setResult(RESULT_OK, dataResult);
-                }
+
+					finish(); // go back button
+					// [CRYPTO_TALK] END: validate QR code and then go back
+				}
 
 			}
 		});

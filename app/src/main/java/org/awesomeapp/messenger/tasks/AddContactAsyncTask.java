@@ -16,6 +16,9 @@ import org.awesomeapp.messenger.service.IImConnection;
 import org.awesomeapp.messenger.ImApp;
 import org.awesomeapp.messenger.model.ImErrorInfo;
 
+import com.deepdatago.account.DeepDatagoManagerImpl;
+import com.deepdatago.account.Tags;
+
 /**
  * Created by n8fr8 on 6/9/15.
  */
@@ -57,6 +60,10 @@ public class AddContactAsyncTask extends AsyncTask<String, Void, Integer> {
         int res = -1;
 
         try {
+            String[] addressArray = address.split("\\@");
+            com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
+            accountManager.friendRequestSync(addressArray[0], Tags.FriendRequest);
+
             IImConnection conn = mApp.getConnection(mProviderId,mAccountId);
             if (conn == null)
                conn = mApp.createConnection(mProviderId,mAccountId);
@@ -79,6 +86,8 @@ public class AddContactAsyncTask extends AsyncTask<String, Void, Integer> {
 
         } catch (RemoteException re) {
             Log.e(ImApp.LOG_TAG, "error adding contact", re);
+        } catch (Exception e) {
+            Log.e(ImApp.LOG_TAG, "Exception: error adding contact", e);
         }
 
         return res;

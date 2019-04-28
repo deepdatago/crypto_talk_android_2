@@ -48,9 +48,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.deepdatago.account.DeepDatagoManagerImpl;
-import com.deepdatago.account.Tags;
-
 import org.awesomeapp.messenger.ImApp;
 import org.awesomeapp.messenger.crypto.otr.OtrAndroidKeyManagerImpl;
 import org.awesomeapp.messenger.model.ImConnection;
@@ -117,36 +114,7 @@ public class AddContactActivity extends BaseActivity {
             @Override
             public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
                 if (actionId == EditorInfo.IME_ACTION_SEND) {
-                    Thread thread = new Thread(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            // [CRYPTO_TALK] add friend request
-                            Pattern pattern = Pattern.compile(EMAIL_PATTERN);
-
-                            Rfc822Token[] recipients = Rfc822Tokenizer.tokenize(mNewAddress.getText());
-
-                            for (Rfc822Token recipient : recipients) {
-
-                                String address = recipient.getAddress();
-                                if (pattern.matcher(address).matches()) {
-                                    try {
-                                        String[] addressArray = address.split("\\@");
-                                        com.deepdatago.account.DeepDatagoManager accountManager = DeepDatagoManagerImpl.getInstance();
-                                        accountManager.friendRequestSync(addressArray[0], Tags.FriendRequest);
-                                    }
-                                    catch (Exception e) {
-
-                                    }
-                                }
-                            }
-                            // [CRYPTO_TALK] end
-
-                            inviteBuddies();
-                        }
-                    });
-                    thread.start();
-
+                    inviteBuddies();
                 }
                 return false;
             }
@@ -234,6 +202,9 @@ public class AddContactActivity extends BaseActivity {
                 if (hasCameraPermission()) {
                     ImApp app = ((ImApp) getApplication());
 
+                    // [CRYPTO_TALK] QR code can just be the crypto address
+                    OnboardingManager.inviteScan(AddContactActivity.this, app.getDefaultUsername());
+                    /*
                     try {
                         String xmppLink = OnboardingManager.generateXmppLink(app.getDefaultUsername(), app.getDefaultOtrKey());
                         OnboardingManager.inviteScan(AddContactActivity.this, xmppLink);
@@ -241,6 +212,8 @@ public class AddContactActivity extends BaseActivity {
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
+                    */
+                    // [CRYPTO_TALK] END: QR code can just be the crypto address
                 }
             }
 
@@ -527,12 +500,16 @@ public class AddContactActivity extends BaseActivity {
                         }
                         else {
                             //parse each string and if they are for a new user then add the user
-                            OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultScan);
+                            // OnboardingManager.DecodedInviteLink diLink = OnboardingManager.decodeInviteLink(resultScan);
+                            // new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(diLink.username, diLink.fingerprint, diLink.nickname);
+                            if (OnboardingManager.validateCryptoAddress(resultScan) == false) {
+                                return;
+                            }
 
-                            new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(diLink.username, diLink.fingerprint, diLink.nickname);
+                            new AddContactAsyncTask(mApp.getDefaultProviderId(), mApp.getDefaultAccountId(), mApp).execute(resultScan, null, null);
 
                             Intent intent=new Intent();
-                            intent.putExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME, diLink.username);
+                            intent.putExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAME, resultScan);
                             intent.putExtra(ContactsPickerActivity.EXTRA_RESULT_PROVIDER, mApp.getDefaultProviderId());
                             intent.putExtra(ContactsPickerActivity.EXTRA_RESULT_ACCOUNT, mApp.getDefaultAccountId());
 
