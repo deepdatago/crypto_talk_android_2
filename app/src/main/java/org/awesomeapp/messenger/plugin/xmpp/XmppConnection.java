@@ -2567,6 +2567,9 @@ public class XmppConnection extends ImConnection {
         join();
         setState(DISCONNECTED, info);
         TrafficStatsCompat.clearThreadStatsTag();
+
+        // [CRYPTO_TALK] auto re-login when XMPP service is restarted
+        do_login();
     }
 
 

@@ -147,6 +147,7 @@ public class ContactListItem extends FrameLayout {
             contactCursor.moveToPosition(0);
             String localNick = contactCursor.getString(1);
             String username = contactCursor.getString(0);
+            contactCursor.close(); // [CRYPTO_TALK] fix "Cursor that has not been deactivated or closed" error
             nickname = nickname.split("@")[0].split("\\.")[0];
         }
 

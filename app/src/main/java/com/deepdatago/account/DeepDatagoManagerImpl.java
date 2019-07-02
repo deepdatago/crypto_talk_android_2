@@ -322,6 +322,7 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
                 else {
                     sContentResolver.insert(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue);
                 }
+                c.close();
 
                 // if (fromAddress.replace("0x", "").equalsIgnoreCase(requestAccount)) {
                 JSONObject returnObj = new JSONObject();
@@ -370,6 +371,7 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
             return;
         }
         JSONArray returnArray = new JSONArray();
+        Cursor c = null;
         try {
             String approvedRequestStr = responseObject.getString("approved_request");
             JSONObject approvedRequestObject = new JSONObject(approvedRequestStr);
@@ -385,7 +387,7 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
             accountValue.put(Tags.DB_FIELD_ACCOUNT, toAddress);
             final String[] projection = { Tags.DB_FIELD_ACCOUNT };
             String selection = Tags.DB_FIELD_ACCOUNT + "='" + toAddress + "'";
-            Cursor c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
+            c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
             int cursorCount = c.getCount();
             if (cursorCount > 0) {
                 sContentResolver.update(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue, selection, null);
@@ -430,6 +432,10 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (c!=null) {
+                c.close();
+            }
         }
 
     }
@@ -560,12 +566,14 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
 
             Uri uri = null;
             uri = sContentResolver.insert(Tags.CRYPTO_ACCOUNT_URI, accountValue);
+            acct.close();
             return symmetricKey;
         }
 
         int index = acct.getColumnIndex(Tags.DB_FIELD_SHARED_SYMMETRIC_KEY);
         acct.moveToFirst();
         symmetricKey = acct.getString(index);
+        acct.close();
 
         return symmetricKey;
     }
@@ -626,6 +634,7 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
         String symmetricKey = null;
 
         JSONObject keysObj = getFriendKeys(accountId);
+        Cursor c = null;
         try {
             if (keysObj != null) {
                 String friendSymmetricKey = keysObj.getString(Tags.FRIEND_SYMMETRIC_KEY);
@@ -644,7 +653,7 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
 
             final String[] projection = { Tags.DB_FIELD_ACCOUNT };
             String selection = Tags.DB_FIELD_ACCOUNT + "='" + accountId + "'";
-            Cursor c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
+            c = sContentResolver.query(Tags.CRYPTO_FRIENDS_KEYS_URI, projection, selection, null, null);
             int cursorCount = c.getCount();
             if (cursorCount > 0) {
                 sContentResolver.update(Tags.CRYPTO_FRIENDS_KEYS_URI, accountValue, selection, null);
@@ -656,6 +665,10 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
         catch (Exception e) {
             e.printStackTrace();
             return null;
+        } finally {
+            if (c != null) {
+                c.close();
+            }
         }
 
 
@@ -677,9 +690,11 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
 
             account.moveToFirst();
             String password = account.getString(index);
+            account.close();
             return password;
 
         }
+        account.close();
         return null;
     }
 
@@ -727,7 +742,12 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
+            } finally {
+                keysCursor.close();
             }
+        }
+        else {
+            keysCursor.close();
         }
 
         return null;
@@ -908,12 +928,14 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
 
             Uri uri = null;
             uri = sContentResolver.insert(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue);
+            acct.close();
             return symmetricKey;
         }
 
         int index = acct.getColumnIndex(Tags.DB_FIELD_GROUP_SYMMETRIC_KEY);
         acct.moveToFirst();
         symmetricKey = acct.getString(index);
+        acct.close();
 
         return symmetricKey;
     }
@@ -985,9 +1007,11 @@ public class DeepDatagoManagerImpl implements DeepDatagoManager {
         {
             Uri uri = null;
             uri = sContentResolver.insert(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue);
+            group.close();
             return;
         }
         sContentResolver.update(Tags.CRYPTO_GROUPS_KEYS_URI, groupValue, selection, null);
+        group.close();
     }
 
 }
