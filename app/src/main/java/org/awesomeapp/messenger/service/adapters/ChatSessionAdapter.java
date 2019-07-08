@@ -360,13 +360,14 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         return ContentUris.parseId(mChatURI);
     }
 
-    public void inviteContact(String contact) {
+    public void inviteContact(String contact, String nickName) {
         if (!mIsGroupChat) {
             return;
         }
         ContactListManagerAdapter listManager = (ContactListManagerAdapter) mConnection
                 .getContactListManager();
         Contact invitee = new Contact(new XmppAddress(contact),contact,Imps.Contacts.TYPE_NORMAL);
+        invitee.setNickName(nickName); // [CRYPTO_TALK] add optional nick name for group member purpose
         getGroupManager().inviteUserAsync((ChatGroup) mChatSession.getParticipant(), invitee);
 
     }
@@ -944,7 +945,13 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
 
         if (mChatURI != null) {
             String username = member.getAddress().getAddress();
-            String nickname = member.getName();
+            // [CRYPTO_TALK] add optional nick name for group member purpose
+            // String nickname = member.getName();
+            String nickname = member.getNickName();
+            if (nickname == null) {
+                nickname = member.getName();
+            }
+            // [CRYPTO_TALK] END add optional nick name for group member purpose
 
             ContentValues values = new ContentValues(4);
             values.put(Imps.GroupMembers.USERNAME, username);

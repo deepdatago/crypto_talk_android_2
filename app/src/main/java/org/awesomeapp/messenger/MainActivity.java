@@ -508,10 +508,11 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                 else {
 
                     ArrayList<String> users = data.getStringArrayListExtra(ContactsPickerActivity.EXTRA_RESULT_USERNAMES);
+                    ArrayList<String> nickNames = data.getStringArrayListExtra(ContactsPickerActivity.EXTRA_RESULT_NICKNAMES);
                     if (users != null)
                     {
                         //start group and do invite here
-                        startGroupChat(users);
+                        startGroupChat(users, nickNames);
                     }
 
                 }
@@ -566,10 +567,10 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
         }
     }
 
-    private void startGroupChat (ArrayList<String> invitees)
+    private void startGroupChat (ArrayList<String> invitees, ArrayList<String> nickNames)
     {
         // [CRYPTO_TALK] unify group naming convention with iOS counter part
-        String chatRoom = "android-group-" + UUID.randomUUID().toString();
+        String chatRoom = "group-" + UUID.randomUUID().toString();
         // [CRYPTO_TALK] END unify group naming convention with iOS counter part
         String chatServer = Tags.BASE_CONFERENCE_ADDRESS; //use the default
         String nickname = mApp.getDefaultUsername().split("@")[0];
@@ -578,7 +579,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
             IImConnection conn = mApp.getConnection(mApp.getDefaultProviderId(),mApp.getDefaultAccountId());
             if (conn.getState() == ImConnection.LOGGED_IN)
             {
-                this.startGroupChat(chatRoom, chatServer, nickname, invitees, conn);
+                this.startGroupChat(chatRoom, chatServer, nickname, invitees, conn, nickNames);
 
             }
         } catch (RemoteException re) {
@@ -918,7 +919,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                         try {
                             IImConnection conn = mApp.getConnection(mApp.getDefaultProviderId(), mApp.getDefaultAccountId());
                             if (conn.getState() == ImConnection.LOGGED_IN)
-                                startGroupChat(chatRoom, chatServer, nickname, null, conn);
+                                startGroupChat(chatRoom, chatServer, nickname, null, conn, null);
 
                         } catch (RemoteException re) {
 
@@ -972,7 +973,7 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
     private IImConnection mLastConnGroup = null;
     private long mRequestedChatId = -1;
 
-    public void startGroupChat (String room, String server, String nickname, final ArrayList<String> invitees, IImConnection conn)
+    public void startGroupChat (String room, String server, String nickname, final ArrayList<String> invitees, IImConnection conn, final ArrayList<String> nickNames)
     {
         mLastConnGroup = conn;
 
@@ -993,7 +994,12 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
             @Override
             protected String doInBackground(String... params) {
 
-                String subject = params[0];
+                String subject = mApp.getDefaultNickname();
+                for (String nickname : nickNames) {
+                    subject += ", ";
+                    subject += nickname;
+                }
+
                 // [CRYPTO_TALK] use chatRoom address created before
                 // String chatRoom = "group" + UUID.randomUUID().toString().substring(0,8);
                 String chatRoom = params[0];
@@ -1039,8 +1045,11 @@ public class MainActivity extends BaseActivity implements IConnectionListener {
                         } catch (Exception e) {
                         }
 
-                        for (String invitee : invitees)
-                            session.inviteContact(invitee);
+                        int inviteeIndex = 0;
+                        for (String invitee : invitees) {
+                            session.inviteContact(invitee, nickNames.get(inviteeIndex++));
+
+                        }
                     }
 
                     return null;

@@ -69,6 +69,9 @@ public class ContactsPickerActivity extends BaseActivity {
     public final static String EXTRA_RESULT_USERNAME = "result";
     public final static String EXTRA_RESULT_USERNAMES = "results";
 
+    // [CRYPTO_TALK] get nick name for group name
+    public final static String EXTRA_RESULT_NICKNAMES = "nicknames";
+
     public final static String EXTRA_RESULT_PROVIDER = "provider";
     public final static String EXTRA_RESULT_ACCOUNT = "account";
     public final static String EXTRA_RESULT_MESSAGE = "message";
@@ -109,14 +112,17 @@ public class ContactsPickerActivity extends BaseActivity {
     private class SelectedContact {
         public long id;
         public String username;
+        public String nickname; // [CRYPTO_TALK] get nick name for group name
+
         public Integer account;
         public Integer provider;
 
-        SelectedContact(long id, String username, int account, int provider) {
+        SelectedContact(long id, String username, int account, int provider, String nickname) {
             this.id = id;
             this.username = username;
             this.account = account;
             this.provider = provider;
+            this.nickname = nickname; // [CRYPTO_TALK] get nick name for group name
         }
     }
     private LongSparseArray<SelectedContact> mSelection = new LongSparseArray<>();
@@ -271,18 +277,21 @@ public class ContactsPickerActivity extends BaseActivity {
             ArrayList<String> users = new ArrayList<>();
             ArrayList<Integer> providers = new ArrayList<>();
             ArrayList<Integer> accounts = new ArrayList<>();
+            ArrayList<String> nickNames = new ArrayList<>(); // [CRYPTO_TALK] get nick name for group name
 
             for (int i = 0; i < mSelection.size(); i++) {
                 SelectedContact contact = mSelection.valueAt(i);
                     users.add(contact.username);
                     providers.add(contact.provider);
                     accounts.add(contact.account);
+                    nickNames.add(contact.nickname); // [CRYPTO_TALK] get nick name for group name
             }
 
             Intent data = new Intent();
             data.putStringArrayListExtra(EXTRA_RESULT_USERNAMES, users);
             data.putIntegerArrayListExtra(EXTRA_RESULT_PROVIDER, providers);
             data.putIntegerArrayListExtra(EXTRA_RESULT_ACCOUNT, accounts);
+            data.putStringArrayListExtra(EXTRA_RESULT_NICKNAMES, nickNames); // [CRYPTO_TALK] get nick name for group name
             setResult(RESULT_OK, data);
             finish();
         }
@@ -489,11 +498,14 @@ public class ContactsPickerActivity extends BaseActivity {
         if (!isSelected(id)) {
             Cursor cursor = (Cursor) mAdapter.getItem(index);
             String userName = cursor.getString(ContactListItem.COLUMN_CONTACT_USERNAME);
+            // [CRYPTO_TALK] get nick name for group name
+            String nickName = cursor.getString(ContactListItem.COLUMN_CONTACT_NICKNAME);
 
             SelectedContact contact = new SelectedContact(id,
                     userName,
                     (int) cursor.getLong(ContactListItem.COLUMN_CONTACT_ACCOUNT),
-                    (int) cursor.getLong(ContactListItem.COLUMN_CONTACT_PROVIDER));
+                    (int) cursor.getLong(ContactListItem.COLUMN_CONTACT_PROVIDER),
+                    nickName); // [CRYPTO_TALK] get nick name for group name
             mSelection.put(id, contact);
             createTagView(index, contact);
             mAdapter.notifyDataSetChanged();

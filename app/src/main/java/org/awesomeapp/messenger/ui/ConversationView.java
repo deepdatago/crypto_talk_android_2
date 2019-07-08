@@ -407,7 +407,7 @@ public class ConversationView {
             IChatSession session = manager.getChatSession(mRemoteAddress);
 
             for (String invitee : invitees)
-                session.inviteContact(invitee);
+                session.inviteContact(invitee, null); // [CRYPTO_TALK] make optional nick name for group members
         }
         catch (Exception e)
         {

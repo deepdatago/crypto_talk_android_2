@@ -511,7 +511,7 @@ public class GroupDisplayActivity extends BaseActivity implements IChatSessionLi
             IChatSession session = manager.getChatSession(mAddress);
 
             for (String invitee : invitees) {
-                session.inviteContact(invitee);
+                session.inviteContact(invitee, "nick");
                 GroupMemberDisplay member = new GroupMemberDisplay();
                 XmppAddress address = new XmppAddress(invitee);
                 member.username = address.getBareAddress();

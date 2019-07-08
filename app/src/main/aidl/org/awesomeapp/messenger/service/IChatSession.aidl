@@ -68,7 +68,7 @@ interface IChatSession {
      * contacts to join this ChatSession if it's a group session. Nothing will
      * happen if this is a simple one-to-one ChatSession.
      */
-    void inviteContact(String contact);
+    void inviteContact(String contact, String nickName);
 
     /**
      * Leaves this ChatSession.

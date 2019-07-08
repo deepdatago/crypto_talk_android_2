@@ -27,6 +27,8 @@ public class Contact extends ImEntity implements Parcelable {
 
     private Address mAddress;
     private String mName;
+    private String mNickName = null; // [CRYPTO_TALK] add optional nick name for group member purpose
+
     private Presence mPresence;
 
     private String mForwardAddress;
@@ -93,6 +95,15 @@ public class Contact extends ImEntity implements Parcelable {
 
     public void setName( String aName ) {
         mName = aName;
+    }
+
+    // [CRYPTO_TALK] add optional nick name for group member purpose
+    public void setNickName( String name ) {
+        this.mNickName = name;
+    }
+
+    public String getNickName() {
+        return this.mNickName;
     }
 
     public Presence getPresence() {
