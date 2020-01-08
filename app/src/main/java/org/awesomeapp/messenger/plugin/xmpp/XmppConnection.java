@@ -275,8 +275,8 @@ public class XmppConnection extends ImConnection {
     private SecureRandom secureRandom;
     private MemorizingTrustManager mMemTrust;
 
-    private final static int SOTIMEOUT = 1000 * 30;
-    private final static int CONNECT_TIMEOUT = 1000 * 30;
+    private final static int SOTIMEOUT = 1000 * 120;
+    private final static int CONNECT_TIMEOUT = 1000 * 120;
     private final static int PING_INTERVAL = 60 * 5; //1 minutes
 
     private PingManager mPingManager;
@@ -838,13 +838,13 @@ public class XmppConnection extends ImConnection {
                         submitForm.setAnswer("muc#roomconfig_roomowners", owners);
                         chatGroup.setOwners(Collections.singletonList(mUser));
 
-                        if (submitForm.getField("muc#roominfo_description") == null) {
-                            FormField field =new FormField("muc#roominfo_description");
+                        if (submitForm.getField("muc#roomconfig_roomdesc") == null) {
+                            FormField field =new FormField("muc#roomconfig_roomdesc");
                             field.setType(FormField.Type.text_single);
                             submitForm.addField(field);
                         }
 
-                        submitForm.setAnswer("muc#roominfo_description", subject);
+                        submitForm.setAnswer("muc#roomconfig_roomdesc", subject);
 
                         if (submitForm.getField("muc#roomconfig_roomname") == null) {
                             FormField field =new FormField("muc#roomconfig_roomname");
@@ -859,12 +859,15 @@ public class XmppConnection extends ImConnection {
                         if (submitForm.getField("muc#roomconfig_changesubject") != null)
                             submitForm.setAnswer("muc#roomconfig_changesubject", false);
 
+                        /*
+                        // [CRYPTO_TALK] this field causes warning/error in ejabberd 18.04 server
                         if (submitForm.getField("muc#roomconfig_anonymity") == null) {
                             FormField field =new FormField("muc#roomconfig_anonymity");
                             field.setType(FormField.Type.text_single);
                             submitForm.addField(field);
                         }
                         submitForm.setAnswer("muc#roomconfig_anonymity", "nonanonymous");
+                        */
 
                         if (submitForm.getField("muc#roomconfig_publicroom") == null) {
                             FormField field =new FormField("muc#roomconfig_publicroom");
@@ -901,12 +904,15 @@ public class XmppConnection extends ImConnection {
                         }
                         submitForm.setAnswer("muc#roomconfig_whois", Arrays.asList("anyone"));
 
+                        /*
+                        // [CRYPTO_TALK] this field causes warning/error in ejabberd 18.04 server
                         if (submitForm.getField("muc#roomconfig_historylength") == null) {
                             FormField field =new FormField("muc#roomconfig_historylength");
                             field.setType(FormField.Type.text_single);
                             submitForm.addField(field);
                         }
                         submitForm.setAnswer("muc#roomconfig_historylength", historyFetchMax);
+                        */
 
                         if (submitForm.getField("muc#maxhistoryfetch") == null) {
                             FormField field =new FormField("muc#maxhistoryfetch");
@@ -926,7 +932,8 @@ public class XmppConnection extends ImConnection {
                             submitForm.addField(new FormField(MucConfigFormManager.MUC_ROOMCONFIG_MEMBERSONLY));
                         submitForm.setAnswer(MucConfigFormManager.MUC_ROOMCONFIG_MEMBERSONLY, true);
 
-                        muc.sendConfigurationForm(submitForm);
+                        // [CRYPTO_TALK] this statement will occasinally cause hanging/exception issue
+                        // muc.sendConfigurationForm(submitForm);
                         muc.changeSubject(subject);
 
                     } catch (XMPPException xe) {
@@ -1137,6 +1144,12 @@ public class XmppConnection extends ImConnection {
 
                     @Override
                     public void subjectUpdated(String subject, EntityFullJid from) {
+                        // [CRYPTO_TALK] if from is null, it will cause runtime error in next statement
+                        if (from == null)
+                        {
+                            debug(TAG, "subjectUpdated: from JID is not properly initialized.");
+                            return;
+                        }
 
                         XmppAddress xa = new XmppAddress(from.toString());
                         MultiUserChat muc = mChatGroupManager.getMultiUserChat(xa.getBareAddress());
@@ -1721,6 +1734,13 @@ public class XmppConnection extends ImConnection {
         //disable compression based on statement by Ge0rg
         // mConfig.setCompressionEnabled(false);
 
+        // [CRYPTO_TALK] is mConnection is null, it will cause various runtime error
+        if (mConnection == null)
+        {
+            debug(TAG, "XmppConnection::initConnectionAndLogin: mConnection is not properly initialized.");
+            return;
+        }
+
         if (mConnection.isConnected() && mConnection.isSecureConnection()
             && (!mConnection.isAuthenticated()))
         {
@@ -2198,7 +2218,7 @@ public class XmppConnection extends ImConnection {
             @Override
             public void processStanza(Stanza stanza) {
 
-                debug(TAG, "receive message: " + stanza.getFrom() + " to " + stanza.getTo());
+                debug(TAG, "XmppConnection::processStanza: receive message: " + stanza.getFrom() + " to " + stanza.getTo());
 
                 org.jivesoftware.smack.packet.Message smackMessage = (org.jivesoftware.smack.packet.Message) stanza;
 
@@ -2210,6 +2230,7 @@ public class XmppConnection extends ImConnection {
                     handleMessage(smackMessage, hasOmemo, true);
 
                 String msg_xml = smackMessage.toXML().toString();
+                debug(TAG, "XmppConnection::processStanza: receive message: " + msg_xml);
 
                 try {
                     handleChatState(smackMessage.getFrom().toString(), msg_xml);
@@ -2845,11 +2866,13 @@ public class XmppConnection extends ImConnection {
                         msgEncrypted.addExtension(new DeliveryReceiptRequest());
                         msgEncrypted.setStanzaId(msgXmpp.getStanzaId());
                         String deliveryReceiptId = DeliveryReceiptRequest.addTo(msgEncrypted);
+                        debug(TAG, "XmppConnection::sendMessageAsync: send muc canOmemo message: \"" + msgEncrypted.toXML());
                         muc.sendMessage(msgEncrypted);
                         message.setType(Imps.MessageType.OUTGOING_ENCRYPTED_VERIFIED);
                     }
                     else {
                         String deliveryReceiptId = DeliveryReceiptRequest.addTo(msgXmpp);
+                        debug(TAG, "XmppConnection::sendMessageAsync: send muc non-canOmemo message: \"" + msgXmpp.toXML());
                         muc.sendMessage(msgXmpp);
                     }
 
@@ -2884,6 +2907,7 @@ public class XmppConnection extends ImConnection {
                                             = getOmemo().getManager().encrypt(jidTo.asBareJid(), msgXmpp.getBody());
                                     msgEncrypted.setStanzaId(msgXmpp.getStanzaId());
                                     DeliveryReceiptRequest.addTo(msgEncrypted);
+                                    debug(TAG, "XmppConnection::sendMessageAsync: send canOmemo message: \"" + msgEncrypted.toXML());
                                     thisChat.sendMessage(msgEncrypted);
                                     message.setType(Imps.MessageType.OUTGOING_ENCRYPTED_VERIFIED);
                                 }
@@ -2896,6 +2920,8 @@ public class XmppConnection extends ImConnection {
                         }
                     } else {
                         DeliveryReceiptRequest.addTo(msgXmpp);
+                        // [CRYPTO_TALK] add debug message
+                        debug(TAG, "XmppConnection::sendMessageAsync: send message: \"" + msgXmpp.toXML());
                         thisChat.sendMessage(msgXmpp);
                         return;
                     }
