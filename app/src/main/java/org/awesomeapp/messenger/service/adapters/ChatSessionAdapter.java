@@ -1909,6 +1909,10 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
 
     public boolean useEncryption (boolean useEncryption)
     {
+        // [CRYPTO_TALK] always not to encrypt by App, instead, encryption will always happen from CRYPTO_TALK code
+        useEncryption = false;
+        // [CRYPTO_TALK] end
+
         mChatSession.setOmemoGroupEnabled(useEncryption);
         ContentValues values = new ContentValues();
         values.put(Imps.Chats.USE_ENCRYPTION,useEncryption ? 1 : 0);
