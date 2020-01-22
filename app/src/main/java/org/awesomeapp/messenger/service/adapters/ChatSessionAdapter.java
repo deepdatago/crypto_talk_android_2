@@ -245,7 +245,13 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         mChatSession.setMessageListener(mListenerAdapter);
 
         try {
-            mChatURI = ContentUris.withAppendedId(Imps.Chats.CONTENT_URI, mContactId);
+            // [CRYPTO_TALK] need to initialize mChatURI earlier so that creator of group chat can be inserted to GroupContactDB
+            if (mChatURI == null)
+            {
+                mChatURI = ContentUris.withAppendedId(Imps.Chats.CONTENT_URI, mContactId);
+            }
+            // [CRYPTO_TALK] END: need to initialize mChatURI earlier so that creator of group chat can be inserted to GroupContactDB
+
             mChatSessionManager.getChatGroupManager().joinChatGroupAsync(group.getAddress(),group.getName());
         
             mMessageURI = Imps.Messages.getContentUriByThreadId(mContactId);
@@ -927,6 +933,10 @@ public class ChatSessionAdapter extends org.awesomeapp.messenger.service.IChatSe
         if (id == -1)
         {
             id = ContentUris.parseId(mContentResolver.insert(contactUri, values));
+            // [CRYPTO_TALK] need to initialize mChatURI earlier so that creator of group chat can be inserted to GroupContactDB
+            mChatURI = ContentUris.withAppendedId(Imps.Chats.CONTENT_URI, id);
+            // [CRYPTO_TALK] END: need to initialize mChatURI earlier so that creator of group chat can be inserted to GroupContactDB
+
             for (Contact member : group.getMembers()) {
                 insertGroupMemberInDb(member);
             }

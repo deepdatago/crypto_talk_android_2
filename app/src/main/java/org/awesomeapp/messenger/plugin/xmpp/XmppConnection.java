@@ -1342,6 +1342,11 @@ public class XmppConnection extends ImConnection {
                  xa = new XmppAddress(entityFullJid.toString());
 
                  Contact mucContact = new Contact(xa, xa.getUser(), Imps.Contacts.TYPE_NORMAL);
+                 // [CRYPTO_TALK] set nick name using name field from contact in group chat member list
+                 Contact tmpContact = mContactListManager.getContact(xa.getAddress());
+                 mucContact.setNickName(tmpContact.getName());
+                // [CRYPTO_TALK] END set nick name using name field from contact in group chat member list
+
                  chatGroup.notifyMemberJoined(entityFullJid.toString(),mucContact);
                 if (occupant != null) {
                     chatGroup.notifyMemberRoleUpdate(mucContact, occupant.getRole().name(), occupant.getAffiliation().toString());
